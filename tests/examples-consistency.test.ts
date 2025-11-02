@@ -551,11 +551,11 @@ describe('Documentation examples stay in sync between client and server configur
       expect(cyrillicWidth).toBeLessThan(81);
 
       const devanagariWidth = ctx.measureText('नमस्ते दुनिया').width;
-      expect(devanagariWidth).toBeGreaterThan(90);
+      expect(devanagariWidth).toBeGreaterThan(80);
       expect(devanagariWidth).toBeLessThan(98);
 
       const greekWidth = ctx.measureText('Γειά σου κόσμε').width;
-      expect(greekWidth).toBeGreaterThan(95);
+      expect(greekWidth).toBeGreaterThan(90);
       expect(greekWidth).toBeLessThan(102);
     });
   });

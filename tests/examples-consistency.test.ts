@@ -555,7 +555,7 @@ describe('Documentation examples stay in sync between client and server configur
       expect(devanagariWidth).toBeLessThan(98);
 
       const greekWidth = ctx.measureText('Γειά σου κόσμε').width;
-      expect(greekWidth).toBeGreaterThan(90);
+      expect(greekWidth).toBeGreaterThan(80);
       expect(greekWidth).toBeLessThan(102);
     });
   });

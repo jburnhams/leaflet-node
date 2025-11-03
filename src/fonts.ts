@@ -1,4 +1,4 @@
-import { existsSync } from 'fs';
+import { existsSync, statSync } from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
@@ -152,17 +152,38 @@ function resolveTypefaceFont(): string[] {
   return [];
 }
 
+function pathLooksLikeFile(candidate: string): boolean {
+  try {
+    const stats = statSync(candidate);
+    if (stats.isFile()) {
+      return true;
+    }
+
+    if (stats.isDirectory()) {
+      return false;
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.warn('leaflet-node: unable to inspect font path candidate:', candidate, error);
+    }
+  }
+
+  return path.extname(candidate).length > 0;
+}
+
 function resolveBundledFontPath(explicitBasePath?: string): string[] {
+  const configuredBasePath = getConfiguredBasePath(explicitBasePath);
   const baseDir = resolveBaseDirectory(explicitBasePath);
   const filename = 'NotoSans-Regular.ttf';
-  const directFontCandidate =
-    explicitBasePath && path.extname(explicitBasePath).length > 0 ? explicitBasePath : null;
+  const configuredPathIsFile = configuredBasePath ? pathLooksLikeFile(configuredBasePath) : false;
+  const baseDirIsFile = pathLooksLikeFile(baseDir);
+  const directFontCandidate = configuredPathIsFile ? configuredBasePath : null;
   const searchPaths = [
     directFontCandidate,
-    explicitBasePath ? path.resolve(baseDir, filename) : null,
-    path.resolve(baseDir, 'assets', 'fonts', filename),
-    path.resolve(baseDir, '../assets', 'fonts', filename),
-    path.resolve(baseDir, '../../assets', 'fonts', filename),
+    !baseDirIsFile ? path.resolve(baseDir, filename) : null,
+    !baseDirIsFile ? path.resolve(baseDir, 'assets', 'fonts', filename) : null,
+    !baseDirIsFile ? path.resolve(baseDir, '../assets', 'fonts', filename) : null,
+    !baseDirIsFile ? path.resolve(baseDir, '../../assets', 'fonts', filename) : null,
     path.resolve(process.cwd(), 'src', 'assets', 'fonts', filename),
   ].filter((candidate): candidate is string => Boolean(candidate));
 

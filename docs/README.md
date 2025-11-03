@@ -29,6 +29,13 @@ This will:
 4. Copy all source files to `docs-dist/`
 5. Place generated images in `docs-dist/images/`
 
+> [!TIP]
+> npm 10+ prints a deprecation warning when the legacy `npm_config_http_proxy`
+> or `npm_config_https_proxy` variables are set. If your environment defines
+> those values, prefix commands with `npm_config_http_proxy= npm_config_https_proxy=`
+> (for example, `npm_config_http_proxy= npm_config_https_proxy= npm run build`)
+> to silence the warning and future-proof your setup.
+
 ## Preview Locally
 
 To preview the built site locally:

@@ -6,11 +6,24 @@
 import { promises as fs } from 'fs';
 import { Image as CanvasImage } from '@napi-rs/canvas';
 import type { Dispatcher } from 'undici';
-import { ProxyAgent, fetch as undiciFetch } from 'undici';
+import { ensureReadableStream } from './polyfills/readable-stream.js';
+
+type UndiciModule = typeof import('undici');
+
+let undiciModulePromise: Promise<UndiciModule> | null = null;
+
+async function loadUndiciModule(): Promise<UndiciModule> {
+  if (!undiciModulePromise) {
+    ensureReadableStream();
+    undiciModulePromise = import('undici');
+  }
+
+  return undiciModulePromise;
+}
 
 let cachedDispatcher: Dispatcher | null | undefined;
 
-function resolveProxyDispatcher(): Dispatcher | null {
+async function resolveProxyDispatcher(undici: UndiciModule): Promise<Dispatcher | null> {
   if (cachedDispatcher !== undefined) {
     return cachedDispatcher;
   }
@@ -25,7 +38,7 @@ function resolveProxyDispatcher(): Dispatcher | null {
     env.all_proxy ||
     null;
 
-  cachedDispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : null;
+  cachedDispatcher = proxyUrl ? new undici.ProxyAgent(proxyUrl) : null;
   return cachedDispatcher;
 }
 import type { HeadlessImage } from './types.js';
@@ -54,8 +67,9 @@ async function fileExists(path: string): Promise<boolean> {
  * Load image from HTTP/HTTPS URL
  */
 async function loadFromUrl(url: string): Promise<Buffer> {
-  const dispatcher = resolveProxyDispatcher();
-  const response = await undiciFetch(url, dispatcher ? { dispatcher } : undefined);
+  const undici = await loadUndiciModule();
+  const dispatcher = await resolveProxyDispatcher(undici);
+  const response = await undici.fetch(url, dispatcher ? { dispatcher } : undefined);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch image from ${url}: ${response.status} ${response.statusText}`);

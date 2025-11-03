@@ -10,16 +10,14 @@ import { JSDOM } from 'jsdom';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { createCanvas } from '@napi-rs/canvas';
-import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import type * as LeafletModule from 'leaflet';
 import type { LeafletHeadlessMap, HeadlessOptions } from './types.js';
 import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
+import { ensureReadableStream } from './polyfills/readable-stream.js';
 
-if (typeof globalThis.ReadableStream === 'undefined') {
-  (globalThis as Record<string, unknown>).ReadableStream = NodeReadableStream;
-}
+ensureReadableStream();
 
 // Extend global namespace for headless environment
 declare global {

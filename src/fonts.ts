@@ -37,6 +37,7 @@ const FONT_SOURCE_MODULE = '@fontsource/noto-sans';
 const FONT_BASE_PATH_ENV_KEY = 'LEAFLET_NODE_FONT_BASE_PATH';
 
 let baseDirectoryWarningIssued = false;
+let deferredBaseDirectoryWarning: unknown | null = null;
 
 function getConfiguredBasePath(explicitBasePath?: string): string | undefined {
   if (explicitBasePath) {
@@ -56,16 +57,12 @@ function getConfiguredBasePath(explicitBasePath?: string): string | undefined {
   return undefined;
 }
 
-function warnAboutUnresolvableBaseDirectory(reason: unknown): void {
+function recordBaseDirectoryResolutionFailure(reason: unknown): void {
   if (baseDirectoryWarningIssued) {
     return;
   }
 
-  baseDirectoryWarningIssued = true;
-  console.warn(
-    'leaflet-node: unable to determine package directory from import.meta.url; falling back to process.cwd().',
-    reason
-  );
+  deferredBaseDirectoryWarning = reason;
 }
 
 function resolveBaseDirectory(explicitBasePath?: string): string {
@@ -85,10 +82,10 @@ function resolveBaseDirectory(explicitBasePath?: string): string {
         return path.dirname(fileURLToPath(resolvedUrl));
       }
 
-      warnAboutUnresolvableBaseDirectory(`Unexpected protocol: ${resolvedUrl.protocol}`);
+      recordBaseDirectoryResolutionFailure(`Unexpected protocol: ${resolvedUrl.protocol}`);
     }
   } catch (error) {
-    warnAboutUnresolvableBaseDirectory(error);
+    recordBaseDirectoryResolutionFailure(error);
   }
 
   if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
@@ -193,6 +190,61 @@ function resolveBundledFontPath(explicitBasePath?: string): string[] {
     }
   }
 
+  const moduleResolved = resolveBundledFontPathViaModuleResolution(filename);
+  if (moduleResolved.length > 0) {
+    return moduleResolved;
+  }
+
+  return [];
+}
+
+function resolveBundledFontPathViaModuleResolution(filename: string): string[] {
+  let requireForResolution: ReturnType<typeof createRequire> | null = null;
+
+  try {
+    if (typeof __filename !== 'undefined') {
+      requireForResolution = createRequire(__filename);
+    }
+  } catch {
+    requireForResolution = null;
+  }
+
+  if (!requireForResolution) {
+    try {
+      if (typeof import.meta !== 'undefined' && typeof import.meta.url === 'string') {
+        requireForResolution = createRequire(import.meta.url);
+      }
+    } catch {
+      requireForResolution = null;
+    }
+  }
+
+  if (!requireForResolution) {
+    return [];
+  }
+
+  const resolutionCandidates = new Set<string>();
+  const assetModuleId = `leaflet-node/assets/fonts/${filename}`;
+
+  try {
+    resolutionCandidates.add(requireForResolution.resolve(assetModuleId));
+  } catch {
+    // ignore resolution failure; fall back to other strategies
+  }
+
+  try {
+    const packageJsonPath = requireForResolution.resolve('leaflet-node/package.json');
+    resolutionCandidates.add(path.resolve(path.dirname(packageJsonPath), 'assets', 'fonts', filename));
+  } catch {
+    // ignore resolution failure; fall back to other strategies
+  }
+
+  for (const candidate of resolutionCandidates) {
+    if (existsSync(candidate)) {
+      return [candidate];
+    }
+  }
+
   return [];
 }
 
@@ -248,11 +300,21 @@ export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
 
   const fontPaths = resolveFontPaths(explicitBasePath);
   if (fontPaths.length === 0) {
+    if (!baseDirectoryWarningIssued && deferredBaseDirectoryWarning !== null) {
+      baseDirectoryWarningIssued = true;
+      console.warn(
+        'leaflet-node: unable to determine package directory from import.meta.url; falling back to process.cwd().',
+        deferredBaseDirectoryWarning
+      );
+    }
+
     console.warn(
       'leaflet-node: fallback font asset not found; install "@fontsource/noto-sans" or register a custom font.'
     );
     return;
   }
+
+  deferredBaseDirectoryWarning = null;
 
   for (const fontPath of fontPaths) {
     for (const family of FALLBACK_FAMILIES) {

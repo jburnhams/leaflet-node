@@ -6,6 +6,7 @@
  */
 
 import { createCanvas, Canvas } from '@napi-rs/canvas';
+import type { SKRSContext2D } from '@napi-rs/canvas';
 import { loadImageSource } from './image.js';
 
 interface PointLike {
@@ -101,6 +102,15 @@ function parseTransform(transform?: string | null): { x: number; y: number; hasV
   return { x: totalX, y: totalY, hasValue };
 }
 
+function isHTMLElement(value: unknown): value is HTMLElement {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as { querySelectorAll?: unknown };
+  return typeof candidate.querySelectorAll === 'function';
+}
+
 function accumulateLeafletPosition(element: HTMLElement, container: HTMLElement): PointLike | null {
   let current: HTMLElement | null = element;
   let totalX = 0;
@@ -175,18 +185,24 @@ function resolveElementPosition(element: HTMLElement, container: HTMLElement): P
  * @param map - The Leaflet map instance
  * @returns Promise that resolves with a Canvas element
  */
+type RenderingContext = CanvasRenderingContext2D | SKRSContext2D;
+
 export async function mapToCanvas(map: any): Promise<Canvas> {
   const size = map.getSize();
   const canvas = createCanvas(size.x, size.y);
-  const ctx = canvas.getContext('2d');
+  const ctx: RenderingContext = canvas.getContext('2d');
 
   // Get the map container element
-  const container = map.getContainer();
+  const container = map.getContainer?.();
+
+  if (!isHTMLElement(container)) {
+    throw new Error('Leaflet map container element is unavailable.');
+  }
 
   // Find all drawable elements in the map (tile images, vector canvases, etc.)
   const drawableElements = Array.from(
-    container.querySelectorAll<HTMLCanvasElement | HTMLImageElement>('canvas, img')
-  );
+    container.querySelectorAll('canvas, img')
+  ) as Array<HTMLCanvasElement | HTMLImageElement>;
 
   // If no drawable elements found, add a temporary vector layer to force canvas creation
   let tempCircle: any = null;
@@ -201,11 +217,11 @@ export async function mapToCanvas(map: any): Promise<Canvas> {
     }).addTo(map);
 
     // Re-query for drawable elements
-    drawableElements.push(
-      ...Array.from(
-        container.querySelectorAll<HTMLCanvasElement | HTMLImageElement>('canvas, img')
-      )
-    );
+    const refreshedDrawableElements = Array.from(
+      container.querySelectorAll('canvas, img')
+    ) as Array<HTMLCanvasElement | HTMLImageElement>;
+
+    drawableElements.push(...refreshedDrawableElements);
 
     if (drawableElements.length === 0) {
       if (tempCircle) tempCircle.remove();
@@ -350,7 +366,7 @@ function normalisePopupText(contentNode: HTMLElement | null | undefined): string
 function measurePopupLayout(
   map: any,
   popup: any,
-  ctx: CanvasRenderingContext2D,
+  ctx: RenderingContext,
   _size?: { x: number; y: number }
 ): PopupLayout | null {
   if (!popup || typeof popup.getLatLng !== 'function') {
@@ -416,7 +432,7 @@ function measurePopupLayout(
 }
 
 function drawRoundedRect(
-  ctx: CanvasRenderingContext2D,
+  ctx: RenderingContext,
   x: number,
   y: number,
   width: number,
@@ -440,7 +456,7 @@ function drawRoundedRect(
 
 async function drawPopupOverlays(
   map: any,
-  ctx: CanvasRenderingContext2D,
+  ctx: RenderingContext,
   size?: { x: number; y: number }
 ): Promise<void> {
   const popupLayers = collectPopupLayers(map);

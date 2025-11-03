@@ -1,4 +1,4 @@
-import { existsSync } from 'fs';
+import { existsSync, statSync } from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
@@ -34,13 +34,68 @@ const FONT_VARIANTS: FontVariant[] = [
 
 const FALLBACK_FAMILIES = ['LeafletNode Sans', 'Helvetica Neue', 'Helvetica', 'Arial'];
 const FONT_SOURCE_MODULE = '@fontsource/noto-sans';
+const FONT_BASE_PATH_ENV_KEY = 'LEAFLET_NODE_FONT_BASE_PATH';
 
-function resolveBaseDirectory(): string {
+let baseDirectoryWarningIssued = false;
+
+function getConfiguredBasePath(explicitBasePath?: string): string | undefined {
+  if (explicitBasePath) {
+    return explicitBasePath;
+  }
+
+  if (typeof process !== 'undefined' && process.env?.[FONT_BASE_PATH_ENV_KEY]) {
+    return process.env[FONT_BASE_PATH_ENV_KEY];
+  }
+
+  const globalConfig = globalThis as Record<string, unknown>;
+  const globalBasePath = globalConfig[FONT_BASE_PATH_ENV_KEY];
+  if (typeof globalBasePath === 'string') {
+    return globalBasePath;
+  }
+
+  return undefined;
+}
+
+function warnAboutUnresolvableBaseDirectory(reason: unknown): void {
+  if (baseDirectoryWarningIssued) {
+    return;
+  }
+
+  baseDirectoryWarningIssued = true;
+  console.warn(
+    'leaflet-node: unable to determine package directory from import.meta.url; falling back to process.cwd().',
+    reason
+  );
+}
+
+function resolveBaseDirectory(explicitBasePath?: string): string {
+  const configuredBasePath = getConfiguredBasePath(explicitBasePath);
+  if (configuredBasePath) {
+    return configuredBasePath;
+  }
+
   if (typeof __dirname !== 'undefined') {
     return __dirname;
   }
 
-  return path.dirname(fileURLToPath(import.meta.url));
+  try {
+    if (typeof import.meta !== 'undefined' && typeof import.meta.url === 'string') {
+      const resolvedUrl = new URL(import.meta.url);
+      if (resolvedUrl.protocol === 'file:') {
+        return path.dirname(fileURLToPath(resolvedUrl));
+      }
+
+      warnAboutUnresolvableBaseDirectory(`Unexpected protocol: ${resolvedUrl.protocol}`);
+    }
+  } catch (error) {
+    warnAboutUnresolvableBaseDirectory(error);
+  }
+
+  if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+    return process.cwd();
+  }
+
+  return '.';
 }
 
 function resolveFontsourceVariants(): string[] {
@@ -97,15 +152,40 @@ function resolveTypefaceFont(): string[] {
   return [];
 }
 
-function resolveBundledFontPath(): string[] {
-  const baseDir = resolveBaseDirectory();
+function pathLooksLikeFile(candidate: string): boolean {
+  try {
+    const stats = statSync(candidate);
+    if (stats.isFile()) {
+      return true;
+    }
+
+    if (stats.isDirectory()) {
+      return false;
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.warn('leaflet-node: unable to inspect font path candidate:', candidate, error);
+    }
+  }
+
+  return path.extname(candidate).length > 0;
+}
+
+function resolveBundledFontPath(explicitBasePath?: string): string[] {
+  const configuredBasePath = getConfiguredBasePath(explicitBasePath);
+  const baseDir = resolveBaseDirectory(explicitBasePath);
   const filename = 'NotoSans-Regular.ttf';
+  const configuredPathIsFile = configuredBasePath ? pathLooksLikeFile(configuredBasePath) : false;
+  const baseDirIsFile = pathLooksLikeFile(baseDir);
+  const directFontCandidate = configuredPathIsFile ? configuredBasePath : null;
   const searchPaths = [
-    path.resolve(baseDir, 'assets', 'fonts', filename),
-    path.resolve(baseDir, '../assets', 'fonts', filename),
-    path.resolve(baseDir, '../../assets', 'fonts', filename),
+    directFontCandidate,
+    !baseDirIsFile ? path.resolve(baseDir, filename) : null,
+    !baseDirIsFile ? path.resolve(baseDir, 'assets', 'fonts', filename) : null,
+    !baseDirIsFile ? path.resolve(baseDir, '../assets', 'fonts', filename) : null,
+    !baseDirIsFile ? path.resolve(baseDir, '../../assets', 'fonts', filename) : null,
     path.resolve(process.cwd(), 'src', 'assets', 'fonts', filename),
-  ];
+  ].filter((candidate): candidate is string => Boolean(candidate));
 
   for (const candidate of searchPaths) {
     if (existsSync(candidate)) {
@@ -116,7 +196,7 @@ function resolveBundledFontPath(): string[] {
   return [];
 }
 
-function resolveFontPaths(): string[] {
+function resolveFontPaths(explicitBasePath?: string): string[] {
   const preferred = resolveFontsourceVariants();
   if (preferred.length > 0) {
     return preferred;
@@ -127,7 +207,7 @@ function resolveFontPaths(): string[] {
     return legacy;
   }
 
-  return resolveBundledFontPath();
+  return resolveBundledFontPath(explicitBasePath);
 }
 
 function registerFontFamily(fontPath: string, family: string): void {
@@ -149,7 +229,7 @@ function registerFontFamily(fontPath: string, family: string): void {
   }
 }
 
-export function ensureDefaultFontsRegistered(): void {
+export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
   if (fontsRegistered) {
     return;
   }
@@ -166,7 +246,7 @@ export function ensureDefaultFontsRegistered(): void {
     console.warn('leaflet-node: unable to load system fonts:', error);
   }
 
-  const fontPaths = resolveFontPaths();
+  const fontPaths = resolveFontPaths(explicitBasePath);
   if (fontPaths.length === 0) {
     console.warn(
       'leaflet-node: fallback font asset not found; install "@fontsource/noto-sans" or register a custom font.'

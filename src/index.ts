@@ -296,6 +296,3 @@ const L = initializeEnvironment();
 // Export typed Leaflet with headless extensions
 export default L;
 export type { LeafletHeadlessMap, HeadlessOptions } from './types.js';
-
-// Also export as named export for convenience
-export { L };

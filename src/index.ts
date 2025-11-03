@@ -10,11 +10,16 @@ import { JSDOM } from 'jsdom';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { createCanvas } from '@napi-rs/canvas';
+import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import type * as LeafletModule from 'leaflet';
 import type { LeafletHeadlessMap, HeadlessOptions } from './types.js';
 import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
+
+if (typeof globalThis.ReadableStream === 'undefined') {
+  (globalThis as Record<string, unknown>).ReadableStream = NodeReadableStream;
+}
 
 // Extend global namespace for headless environment
 declare global {
@@ -27,7 +32,10 @@ declare global {
 /**
  * Default options for headless environment
  */
-const DEFAULT_OPTIONS: Required<HeadlessOptions> = {
+type ResolvedHeadlessOptions =
+  Required<Omit<HeadlessOptions, 'fontAssetBasePath'>> & Pick<HeadlessOptions, 'fontAssetBasePath'>;
+
+const DEFAULT_OPTIONS: ResolvedHeadlessOptions = {
   mapSize: { width: 1024, height: 1024 },
   enableAnimations: false,
   userAgent: 'webkit',
@@ -37,14 +45,14 @@ const DEFAULT_OPTIONS: Required<HeadlessOptions> = {
  * Initialize the headless environment (called automatically)
  */
 function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletModule {
-  ensureDefaultFontsRegistered();
+  const opts: ResolvedHeadlessOptions = { ...DEFAULT_OPTIONS, ...options };
+
+  ensureDefaultFontsRegistered(opts.fontAssetBasePath);
 
   // Return existing Leaflet instance if already initialized
   if ((global as any).L) {
     return (global as any).L;
   }
-
-  const opts = { ...DEFAULT_OPTIONS, ...options };
 
   // Create fake DOM environment using jsdom
   const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
@@ -190,7 +198,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
  */
 function patchMapPrototype(
   L: typeof LeafletModule,
-  options: Required<HeadlessOptions>
+  options: ResolvedHeadlessOptions
 ): void {
   const originalInit = (L.Map.prototype as any).initialize;
 

@@ -50,6 +50,12 @@ export interface HeadlessOptions {
    * @default 'webkit'
    */
   userAgent?: string;
+
+  /**
+   * Base directory used to resolve bundled font assets when automatic detection fails.
+   * Accepts an absolute path.
+   */
+  fontAssetBasePath?: string;
 }
 
 /**

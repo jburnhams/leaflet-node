@@ -8,7 +8,9 @@ describe('environment resilience', () => {
     vi.doUnmock('undici');
     vi.doUnmock('@napi-rs/canvas');
     vi.doUnmock('module');
+    vi.doUnmock('fs');
     delete (globalThis as Record<string, unknown>).document;
+    delete (globalThis as Record<string, unknown>).LEAFLET_NODE_FONT_BASE_PATH;
     delete process.env.LEAFLET_NODE_FONT_BASE_PATH;
   });
 
@@ -182,6 +184,35 @@ describe('environment resilience', () => {
         'leaflet-node: fallback font asset not found; install "@fontsource/noto-sans" or register a custom font.'
       )
     ).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+
+  it('defers fallback warnings until a base path is configured', async () => {
+    vi.doMock('fs', async () => {
+      const actual = await vi.importActual<typeof import('fs')>('fs');
+      const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' as const });
+
+      return {
+        ...actual,
+        existsSync: () => false,
+        statSync: () => {
+          throw enoent;
+        },
+      };
+    });
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { ensureDefaultFontsRegistered, setFontAssetBasePath } = await import('../src/fonts.js');
+
+    ensureDefaultFontsRegistered(undefined, { suppressWarningsUntilConfigured: true });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    setFontAssetBasePath('/custom/fonts/NotoSans-Regular.ttf');
+
+    expect(warnSpy).toHaveBeenCalled();
 
     warnSpy.mockRestore();
   });

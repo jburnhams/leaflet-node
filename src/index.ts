@@ -45,7 +45,9 @@ const DEFAULT_OPTIONS: ResolvedHeadlessOptions = {
 function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletModule {
   const opts: ResolvedHeadlessOptions = { ...DEFAULT_OPTIONS, ...options };
 
-  ensureDefaultFontsRegistered(opts.fontAssetBasePath);
+  ensureDefaultFontsRegistered(opts.fontAssetBasePath, {
+    suppressWarningsUntilConfigured: typeof opts.fontAssetBasePath === 'undefined',
+  });
 
   // Return existing Leaflet instance if already initialized
   if ((global as any).L) {

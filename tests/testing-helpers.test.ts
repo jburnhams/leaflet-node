@@ -92,4 +92,31 @@ describe('testing utilities', () => {
 
     await expect(waitPromise).rejects.toThrow(/Tile failed to load/);
   });
+
+  it('rejects even if the final pending tile fails', async () => {
+    class FinalErrorTileLayer extends EventEmitter {
+      _loading = true;
+      _tilesToLoad = 1;
+      getTileUrl() { return ''; }
+      on(event: string, listener: (...args: any[]) => void) {
+        this.addListener(event, listener);
+        return this as unknown as TileLayer;
+      }
+      off(event: string, listener: (...args: any[]) => void) {
+        this.removeListener(event, listener);
+        return this as unknown as TileLayer;
+      }
+    }
+
+    const layer = new FinalErrorTileLayer() as unknown as TileLayer & FinalErrorTileLayer;
+
+    const waitPromise = waitForTiles(layer, { timeout: 1000 });
+    layer.emit('tileloadstart');
+    layer._tilesToLoad = 0;
+    layer._loading = false;
+    layer.emit('tileerror', { tile: { src: 'http://example.com/final.png' } });
+    layer.emit('load');
+
+    await expect(waitPromise).rejects.toThrow(/Tile failed to load/);
+  });
 });

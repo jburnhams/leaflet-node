@@ -174,11 +174,6 @@ export function waitForTiles(
     const handleTileError = (event: any) => {
       failed += 1;
       emitProgress();
-      if (isComplete()) {
-        handleLoad();
-        return;
-      }
-
       const tileUrl = event?.tile?.src || event?.coords;
       cleanup();
       reject(new Error(`Tile failed to load: ${tileUrl ?? 'unknown tile'}`));

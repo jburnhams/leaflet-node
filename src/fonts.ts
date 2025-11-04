@@ -169,7 +169,14 @@ function pathLooksLikeFile(candidate: string): boolean {
   return path.extname(candidate).length > 0;
 }
 
-function resolveBundledFontPath(explicitBasePath?: string): string[] {
+interface ResolveBundledFontPathOptions {
+  skipModuleResolution?: boolean;
+}
+
+function resolveBundledFontPath(
+  explicitBasePath?: string,
+  options: ResolveBundledFontPathOptions = {}
+): string[] {
   const configuredBasePath = getConfiguredBasePath(explicitBasePath);
   const baseDir = resolveBaseDirectory(explicitBasePath);
   const filename = 'NotoSans-Regular.ttf';
@@ -191,9 +198,11 @@ function resolveBundledFontPath(explicitBasePath?: string): string[] {
     }
   }
 
-  const moduleResolved = resolveBundledFontPathViaModuleResolution(filename);
-  if (moduleResolved.length > 0) {
-    return moduleResolved;
+  if (!options.skipModuleResolution) {
+    const moduleResolved = resolveBundledFontPathViaModuleResolution(filename);
+    if (moduleResolved.length > 0) {
+      return moduleResolved;
+    }
   }
 
   return [];
@@ -250,6 +259,11 @@ function resolveBundledFontPathViaModuleResolution(filename: string): string[] {
 }
 
 function resolveFontPaths(explicitBasePath?: string): string[] {
+  const configuredBasePath = getConfiguredBasePath(explicitBasePath);
+  if (configuredBasePath) {
+    return resolveBundledFontPath(explicitBasePath, { skipModuleResolution: true });
+  }
+
   const preferred = resolveFontsourceVariants();
   if (preferred.length > 0) {
     return preferred;

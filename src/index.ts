@@ -303,15 +303,16 @@ function patchMapPrototype(
       // @napi-rs/canvas has separate overloads for PNG and JPEG
       if (format === 'jpeg') {
         if (typeof quality === 'number') {
-          return canvas.toBuffer('image/jpeg', { quality });
+          return canvas.toBuffer('image/jpeg', quality);
         }
         return canvas.toBuffer('image/jpeg');
-      } else {
-        if (typeof quality === 'number') {
-          return canvas.toBuffer('image/png', { quality });
-        }
-        return canvas.toBuffer('image/png');
       }
+      if (typeof quality === 'number') {
+        console.warn(
+          'leaflet-node: PNG quality is not supported; ignoring provided quality value.'
+        );
+      }
+      return canvas.toBuffer('image/png');
     } catch (err) {
       throw new Error(`Failed to export map to buffer: ${(err as Error).message}`);
     }
@@ -319,7 +320,7 @@ function patchMapPrototype(
 
   const originalRemove = L.Map.prototype.remove;
   if (typeof originalRemove === 'function') {
-    L.Map.prototype.remove = function (...args: any[]) {
+    L.Map.prototype.remove = function (this: L.Map) {
       try {
         this.eachLayer?.((layer: any) => {
           const renderer = layer?._renderer;
@@ -334,7 +335,7 @@ function patchMapPrototype(
         console.warn('leaflet-node: error during map cleanup', cleanupError);
       }
 
-      return originalRemove.apply(this, args);
+      return originalRemove.call(this);
     } as typeof originalRemove;
   }
 }

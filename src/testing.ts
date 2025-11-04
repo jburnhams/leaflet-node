@@ -124,7 +124,11 @@ export function waitForTiles(
       const tilesRemaining = Number.isFinite((tileLayer as any)._tilesToLoad)
         ? Math.max((tileLayer as any)._tilesToLoad || 0, 0)
         : pending;
-      return (!tileLayer['_loading'] && pending <= 0) || tilesRemaining <= 0;
+      const isLayerLoading =
+        typeof tileLayer.isLoading === 'function'
+          ? tileLayer.isLoading()
+          : Boolean((tileLayer as any)._loading);
+      return (!isLayerLoading && pending <= 0) || tilesRemaining <= 0;
     };
 
     if (isComplete()) {

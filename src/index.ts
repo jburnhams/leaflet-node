@@ -11,7 +11,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { createCanvas } from '@napi-rs/canvas';
 import type * as LeafletModule from 'leaflet';
-import type { LeafletHeadlessMap, HeadlessOptions } from './types.js';
+import type { LeafletHeadlessMap, HeadlessOptions, ImageExportOptions } from './types.js';
 import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
@@ -129,7 +129,28 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
     if (tagName.toLowerCase() === 'canvas') {
       const width = (element as any).width || 300;
       const height = (element as any).height || 150;
-      const napiCanvas = createCanvas(width, height);
+      let napiCanvas;
+      try {
+        napiCanvas = createCanvas(width, height);
+      } catch (error) {
+        const hint = new Error(
+          'leaflet-node: Canvas initialization failed. Ensure @napi-rs/canvas is installed correctly. ' +
+          'If you are running tests with Jest, use @jest-environment node or import leaflet-node before jsdom is created.'
+        );
+        (hint as any).cause = error;
+        console.error('leaflet-node: Canvas initialization failed', error);
+        throw hint;
+      }
+
+      const probeContext = napiCanvas.getContext('2d');
+      if (!probeContext) {
+        const message = [
+          'leaflet-node: Canvas context could not be created.',
+          'If you are running under a test runner, ensure @jest-environment node is used or import leaflet-node before jsdom initializes.',
+        ].join(' ');
+        console.error(message);
+        throw new Error(message);
+      }
 
       // Copy canvas methods to the DOM element
       (element as any).getContext = function(contextType: string, options?: any) {
@@ -258,11 +279,11 @@ function patchMapPrototype(
   // Add saveImage method (async version)
   (L.Map.prototype as any).saveImage = async function (
     this: any,
-    filename: string
+    filename: string,
+    options: ImageExportOptions = {}
   ): Promise<string> {
     try {
-      const canvas = await mapToCanvas(this);
-      const buffer = canvas.toBuffer('image/png');
+      const buffer = await (this as LeafletHeadlessMap).toBuffer(options.format ?? 'png', options.quality);
 
       await fs.writeFile(filename, buffer);
       return filename;
@@ -274,20 +295,48 @@ function patchMapPrototype(
   // Add toBuffer method for in-memory image generation
   (L.Map.prototype as any).toBuffer = async function (
     this: any,
-    format: 'png' | 'jpeg' = 'png'
+    format: 'png' | 'jpeg' = 'png',
+    quality?: number
   ): Promise<Buffer> {
     try {
       const canvas = await mapToCanvas(this);
       // @napi-rs/canvas has separate overloads for PNG and JPEG
       if (format === 'jpeg') {
+        if (typeof quality === 'number') {
+          return canvas.toBuffer('image/jpeg', { quality });
+        }
         return canvas.toBuffer('image/jpeg');
       } else {
+        if (typeof quality === 'number') {
+          return canvas.toBuffer('image/png', { quality });
+        }
         return canvas.toBuffer('image/png');
       }
     } catch (err) {
       throw new Error(`Failed to export map to buffer: ${(err as Error).message}`);
     }
   };
+
+  const originalRemove = L.Map.prototype.remove;
+  if (typeof originalRemove === 'function') {
+    L.Map.prototype.remove = function (...args: any[]) {
+      try {
+        this.eachLayer?.((layer: any) => {
+          const renderer = layer?._renderer;
+          if (renderer && renderer._frame) {
+            if (typeof L.Util?.cancelAnimFrame === 'function') {
+              L.Util.cancelAnimFrame(renderer._frame);
+            }
+            renderer._frame = null;
+          }
+        });
+      } catch (cleanupError) {
+        console.warn('leaflet-node: error during map cleanup', cleanupError);
+      }
+
+      return originalRemove.apply(this, args);
+    } as typeof originalRemove;
+  }
 }
 
 // Initialize environment on module load
@@ -295,5 +344,6 @@ const L = initializeEnvironment();
 
 // Export typed Leaflet with headless extensions
 export default L;
-export type { LeafletHeadlessMap, HeadlessOptions } from './types.js';
+export { initializeEnvironment };
+export type { LeafletHeadlessMap, HeadlessOptions, ImageExportOptions } from './types.js';
 export { setFontAssetBasePath } from './fonts.js';

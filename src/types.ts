@@ -14,16 +14,31 @@ export interface LeafletHeadlessMap extends L.Map {
   /**
    * Save the current map view to an image file
    * @param filename - Output filename (e.g., 'map.png')
+   * @param options - Optional export configuration
    * @returns Promise that resolves with the filename when complete
    */
-  saveImage(filename: string): Promise<string>;
+  saveImage(filename: string, options?: ImageExportOptions): Promise<string>;
 
   /**
    * Export the current map view to a Buffer
-   * @param format - Image format ('png' or 'jpeg')
+    * @param format - Image format ('png' or 'jpeg')
+   * @param quality - Optional quality hint (0-1 for JPEG)
    * @returns Promise that resolves with the image buffer
    */
-  toBuffer(format?: 'png' | 'jpeg'): Promise<Buffer>;
+  toBuffer(format?: 'png' | 'jpeg', quality?: number): Promise<Buffer>;
+}
+
+export interface ImageExportOptions {
+  /**
+   * Target image format
+   * @default 'png'
+   */
+  format?: 'png' | 'jpeg';
+
+  /**
+   * Optional encoder quality (0-1 for JPEG, 0-1 for PNG in @napi-rs/canvas)
+   */
+  quality?: number;
 }
 
 /**
@@ -67,4 +82,12 @@ export interface HeadlessImage {
   onerror?: (error: Error) => void;
   width?: number;
   height?: number;
+}
+
+declare module 'leaflet' {
+  interface Map {
+    setSize(width: number, height: number): LeafletHeadlessMap;
+    saveImage(filename: string, options?: ImageExportOptions): Promise<string>;
+    toBuffer(format?: 'png' | 'jpeg', quality?: number): Promise<Buffer>;
+  }
 }

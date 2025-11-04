@@ -40,6 +40,10 @@ const FONT_BASE_PATH_ENV_KEY = 'LEAFLET_NODE_FONT_BASE_PATH';
 let baseDirectoryWarningIssued = false;
 let deferredBaseDirectoryWarning: unknown | null = null;
 
+interface EnsureDefaultFontsOptions {
+  suppressWarningsUntilConfigured?: boolean;
+}
+
 function getConfiguredBasePath(explicitBasePath?: string): string | undefined {
   if (explicitBasePath) {
     return explicitBasePath;
@@ -296,12 +300,14 @@ function registerFontFamily(fontPath: string, family: string): void {
   }
 }
 
-export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
+export function ensureDefaultFontsRegistered(
+  explicitBasePath?: string,
+  options: EnsureDefaultFontsOptions = {}
+): void {
   if (fontsRegistered && explicitBasePath === lastExplicitBasePath) {
     return;
   }
 
-  fontsRegistered = true;
   lastExplicitBasePath = explicitBasePath;
 
   const fontsApi = GlobalFonts as unknown as {
@@ -314,22 +320,33 @@ export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
     console.warn('leaflet-node: unable to load system fonts:', error);
   }
 
+  const configuredBasePath = getConfiguredBasePath(explicitBasePath);
   const fontPaths = resolveFontPaths(explicitBasePath);
   if (fontPaths.length === 0) {
-    if (!baseDirectoryWarningIssued && deferredBaseDirectoryWarning !== null) {
-      baseDirectoryWarningIssued = true;
+    fontsRegistered = false;
+
+    const shouldSuppressWarnings =
+      options.suppressWarningsUntilConfigured && !configuredBasePath;
+
+    if (!shouldSuppressWarnings) {
+      if (!baseDirectoryWarningIssued && deferredBaseDirectoryWarning !== null) {
+        baseDirectoryWarningIssued = true;
+        console.warn(
+          'leaflet-node: unable to determine package directory from import.meta.url; falling back to process.cwd().',
+          deferredBaseDirectoryWarning
+        );
+      }
+
       console.warn(
-        'leaflet-node: unable to determine package directory from import.meta.url; falling back to process.cwd().',
-        deferredBaseDirectoryWarning
+        'leaflet-node: fallback font asset not found; install "@fontsource/noto-sans" or register a custom font.'
       );
     }
 
-    console.warn(
-      'leaflet-node: fallback font asset not found; install "@fontsource/noto-sans" or register a custom font.'
-    );
     return;
   }
 
+  fontsRegistered = true;
+  baseDirectoryWarningIssued = false;
   deferredBaseDirectoryWarning = null;
 
   for (const fontPath of fontPaths) {

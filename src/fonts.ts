@@ -6,6 +6,7 @@ import { GlobalFonts } from '@napi-rs/canvas';
 
 let fontsRegistered = false;
 const registeredFonts = new Set<string>();
+let lastExplicitBasePath: string | undefined;
 
 interface FontVariant {
   subset: string;
@@ -168,7 +169,14 @@ function pathLooksLikeFile(candidate: string): boolean {
   return path.extname(candidate).length > 0;
 }
 
-function resolveBundledFontPath(explicitBasePath?: string): string[] {
+interface ResolveBundledFontPathOptions {
+  skipModuleResolution?: boolean;
+}
+
+function resolveBundledFontPath(
+  explicitBasePath?: string,
+  options: ResolveBundledFontPathOptions = {}
+): string[] {
   const configuredBasePath = getConfiguredBasePath(explicitBasePath);
   const baseDir = resolveBaseDirectory(explicitBasePath);
   const filename = 'NotoSans-Regular.ttf';
@@ -190,9 +198,11 @@ function resolveBundledFontPath(explicitBasePath?: string): string[] {
     }
   }
 
-  const moduleResolved = resolveBundledFontPathViaModuleResolution(filename);
-  if (moduleResolved.length > 0) {
-    return moduleResolved;
+  if (!options.skipModuleResolution) {
+    const moduleResolved = resolveBundledFontPathViaModuleResolution(filename);
+    if (moduleResolved.length > 0) {
+      return moduleResolved;
+    }
   }
 
   return [];
@@ -249,6 +259,11 @@ function resolveBundledFontPathViaModuleResolution(filename: string): string[] {
 }
 
 function resolveFontPaths(explicitBasePath?: string): string[] {
+  const configuredBasePath = getConfiguredBasePath(explicitBasePath);
+  if (configuredBasePath) {
+    return resolveBundledFontPath(explicitBasePath, { skipModuleResolution: true });
+  }
+
   const preferred = resolveFontsourceVariants();
   if (preferred.length > 0) {
     return preferred;
@@ -282,11 +297,12 @@ function registerFontFamily(fontPath: string, family: string): void {
 }
 
 export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
-  if (fontsRegistered) {
+  if (fontsRegistered && explicitBasePath === lastExplicitBasePath) {
     return;
   }
 
   fontsRegistered = true;
+  lastExplicitBasePath = explicitBasePath;
 
   const fontsApi = GlobalFonts as unknown as {
     loadSystemFonts?: () => void;
@@ -321,4 +337,20 @@ export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
       registerFontFamily(fontPath, family);
     }
   }
+}
+
+export function setFontAssetBasePath(basePath: string | null | undefined): void {
+  const globalConfig = globalThis as Record<string, unknown>;
+
+  if (typeof basePath === 'string' && basePath.length > 0) {
+    globalConfig[FONT_BASE_PATH_ENV_KEY] = basePath;
+  } else {
+    delete globalConfig[FONT_BASE_PATH_ENV_KEY];
+  }
+
+  fontsRegistered = false;
+  baseDirectoryWarningIssued = false;
+  deferredBaseDirectoryWarning = null;
+
+  ensureDefaultFontsRegistered(basePath ?? undefined);
 }

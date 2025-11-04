@@ -47,6 +47,30 @@ await map.saveImage('map.png');
 
 📚 View the full documentation and live examples at [jburnhams.github.io/leaflet-node](https://jburnhams.github.io/leaflet-node/).
 
+### Configuring fallback fonts
+
+Leaflet-node automatically attempts to register the bundled Noto Sans fallback fonts. In
+environments where `document.currentScript` is unavailable (for example, Node.js test
+runners without a DOM shim), you can provide an explicit path to the font assets to
+avoid warning messages:
+
+```ts
+process.env.LEAFLET_NODE_FONT_BASE_PATH = '/absolute/path/to/NotoSans-Regular.ttf';
+const L = await import('leaflet-node');
+```
+
+Alternatively, you can set the base path programmatically after importing the
+package:
+
+```ts
+import L, { setFontAssetBasePath } from 'leaflet-node';
+
+setFontAssetBasePath('/absolute/path/to/NotoSans-Regular.ttf');
+```
+
+The base path can point directly to a font file or to a directory containing the
+bundled `NotoSans-Regular.ttf` asset.
+
 ---
 
 **Questions?** Open an issue on [GitHub](https://github.com/jburnhams/leaflet-node/issues).

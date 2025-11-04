@@ -6,6 +6,7 @@ import { GlobalFonts } from '@napi-rs/canvas';
 
 let fontsRegistered = false;
 const registeredFonts = new Set<string>();
+let lastExplicitBasePath: string | undefined;
 
 interface FontVariant {
   subset: string;
@@ -282,11 +283,12 @@ function registerFontFamily(fontPath: string, family: string): void {
 }
 
 export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
-  if (fontsRegistered) {
+  if (fontsRegistered && explicitBasePath === lastExplicitBasePath) {
     return;
   }
 
   fontsRegistered = true;
+  lastExplicitBasePath = explicitBasePath;
 
   const fontsApi = GlobalFonts as unknown as {
     loadSystemFonts?: () => void;
@@ -321,4 +323,20 @@ export function ensureDefaultFontsRegistered(explicitBasePath?: string): void {
       registerFontFamily(fontPath, family);
     }
   }
+}
+
+export function setFontAssetBasePath(basePath: string | null | undefined): void {
+  const globalConfig = globalThis as Record<string, unknown>;
+
+  if (typeof basePath === 'string' && basePath.length > 0) {
+    globalConfig[FONT_BASE_PATH_ENV_KEY] = basePath;
+  } else {
+    delete globalConfig[FONT_BASE_PATH_ENV_KEY];
+  }
+
+  fontsRegistered = false;
+  baseDirectoryWarningIssued = false;
+  deferredBaseDirectoryWarning = null;
+
+  ensureDefaultFontsRegistered(basePath ?? undefined);
 }

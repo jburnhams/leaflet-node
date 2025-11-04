@@ -294,3 +294,4 @@ const L = initializeEnvironment();
 // Export typed Leaflet with headless extensions
 export default L;
 export type { LeafletHeadlessMap, HeadlessOptions } from './types.js';
+export { setFontAssetBasePath } from './fonts.js';

@@ -3,12 +3,14 @@
  * Build script for generating the docs website
  * This script:
  * 1. Generates PNG images for each example using leaflet-node
- * 2. Copies the docs source files to docs-dist
+ * 2. Generates API documentation using TypeDoc
+ * 3. Copies the docs source files to docs-dist
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import L from '../src/index.js';
 import type { LeafletHeadlessMap } from '../src/types.js';
 
@@ -114,6 +116,24 @@ function copyDirectory(src: string, dest: string, exclude: string[] = []): void 
 }
 
 /**
+ * Generate API documentation using TypeDoc
+ */
+function generateApiDocs(): void {
+  console.log('\n📚 Generating API documentation...');
+
+  try {
+    execSync('npx typedoc', {
+      cwd: rootDir,
+      stdio: 'inherit'
+    });
+    console.log('✓ API documentation generated');
+  } catch (error) {
+    console.error('✗ Error generating API docs:', error);
+    throw error;
+  }
+}
+
+/**
  * Main build function
  */
 async function build(): Promise<void> {
@@ -131,6 +151,9 @@ async function build(): Promise<void> {
   console.log('\n📁 Copying source files...');
   copyDirectory(docsDir, distDir, ['images']);
   console.log('✓ Source files copied');
+
+  // Generate API documentation
+  generateApiDocs();
 
   // Load examples
   console.log('\n📖 Loading examples...');

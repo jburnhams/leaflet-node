@@ -433,6 +433,81 @@ h2 {
   color: var(--primary-color);
 }
 
+/* API Reference section */
+.api-reference p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+.api-links {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.api-link-button {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--primary-color), #3d7d3f);
+  color: white;
+  padding: 15px 40px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.api-link-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.api-reference h3 {
+  color: var(--primary-color);
+  font-size: 1.3rem;
+  margin: 25px 0 15px;
+}
+
+.api-reference ul {
+  list-style: none;
+  display: grid;
+  gap: 15px;
+}
+
+.api-reference li {
+  background: white;
+  padding: 18px 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--secondary-color);
+  transition: all 0.3s ease;
+}
+
+.api-reference li:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.api-reference li a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.api-reference li a:hover {
+  text-decoration: underline;
+}
+
+.api-reference code {
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
 /* Footer */
 footer {
   background: #2c3e50;

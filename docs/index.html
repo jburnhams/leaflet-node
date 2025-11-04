@@ -13,6 +13,7 @@
       <h1>🗺️ Leaflet-Node Examples</h1>
       <p class="tagline">Generate server-side map images identical to client-side rendering</p>
       <div class="header-links">
+        <a href="api/index.html">API Reference</a>
         <a href="https://github.com/jburnhams/leaflet-node" target="_blank">GitHub</a>
         <a href="https://www.npmjs.com/package/leaflet-node" target="_blank">npm</a>
         <a href="https://leafletjs.com" target="_blank">Leaflet.js</a>
@@ -101,6 +102,23 @@ await map.saveImage('map.png');</code></pre>
         <li>🧪 <strong>Testing Ready:</strong> Perfect for automated testing and CI/CD</li>
         <li>📦 <strong>Zero Browser:</strong> Pure Node.js using jsdom and node-canvas</li>
         <li>🔧 <strong>Type Safe:</strong> Full TypeScript definitions included</li>
+      </ul>
+    </section>
+
+    <section class="api-reference">
+      <h2>API Reference</h2>
+      <p>
+        Complete API documentation is available with detailed information about all exported functions, types, and interfaces.
+        The documentation is auto-generated from TSDoc comments in the source code.
+      </p>
+      <div class="api-links">
+        <a href="api/index.html" class="api-link-button">📖 View Full API Documentation</a>
+      </div>
+      <h3>Quick Links</h3>
+      <ul>
+        <li><a href="api/index.html">Main Module</a> - Core leaflet-node functionality including <code>initializeEnvironment</code> and <code>setFontAssetBasePath</code></li>
+        <li><a href="api/interfaces/LeafletHeadlessMap.html">LeafletHeadlessMap</a> - Extended map interface with <code>setSize()</code>, <code>saveImage()</code>, and <code>toBuffer()</code></li>
+        <li><a href="api/modules/testing.html">Testing Module</a> - Helper functions for testing including <code>createTestMap</code>, <code>waitForTiles</code>, and <code>waitForMapReady</code></li>
       </ul>
     </section>
   </main>

@@ -6,6 +6,8 @@ This directory contains the source files for the leaflet-node examples website, 
 
 The documentation website demonstrates leaflet-node by showing Leaflet.js examples side-by-side with server-generated PNG images. Each example uses the same configuration for both client-side rendering (interactive map) and server-side rendering (static image), proving that leaflet-node can generate identical output.
 
+The site also includes comprehensive API documentation auto-generated from TSDoc comments in the source code using TypeDoc.
+
 ## Structure
 
 - `index.html` - Main HTML page
@@ -13,6 +15,11 @@ The documentation website demonstrates leaflet-node by showing Leaflet.js exampl
 - `app.js` - Client-side JavaScript that renders the live maps
 - `examples.js` - Shared example configurations used by both client and server
 - `README.md` - This file
+
+After building, the `docs-dist/` directory contains:
+- All source files from `docs/`
+- `images/` - Generated PNG images for each example
+- `api/` - Auto-generated API documentation from TypeDoc
 
 ## Building
 
@@ -25,9 +32,9 @@ npm run build:docs
 This will:
 1. Build the leaflet-node library (`npm run build`)
 2. Run the build script (`scripts/build-docs.ts`)
-3. Generate PNG images for each example using leaflet-node
-4. Copy all source files to `docs-dist/`
-5. Place generated images in `docs-dist/images/`
+3. Copy all source files to `docs-dist/`
+4. Generate API documentation using TypeDoc to `docs-dist/api/`
+5. Generate PNG images for each example using leaflet-node to `docs-dist/images/`
 
 > [!TIP]
 > npm 10+ prints a deprecation warning when the legacy `npm_config_http_proxy`
@@ -109,6 +116,51 @@ The workflow:
 4. Runs `npm run build:docs`
 5. Deploys the `docs-dist` folder to GitHub Pages
 
+## API Documentation
+
+The API reference is auto-generated from TSDoc comments in the source code using TypeDoc.
+
+### Generating API Docs Only
+
+To generate just the API documentation without building the entire docs site:
+
+```bash
+npm run docs:api
+```
+
+This runs TypeDoc and outputs to `docs-dist/api/`. The configuration is in `typedoc.json`.
+
+### Adding TSDoc Comments
+
+TypeDoc reads JSDoc-style comments from the TypeScript source files. To add or update API documentation:
+
+1. Add TSDoc comments to functions, interfaces, types, etc. in the `src/` directory
+2. Use standard JSDoc tags like `@param`, `@returns`, `@example`, etc.
+3. Run `npm run docs:api` to regenerate the documentation
+
+Example:
+
+```typescript
+/**
+ * Creates a new test map with common defaults
+ * @param options - Configuration options for the test map
+ * @returns A configured LeafletHeadlessMap instance
+ * @example
+ * ```typescript
+ * import { createTestMap } from 'leaflet-node/testing';
+ *
+ * const map = createTestMap({
+ *   width: 800,
+ *   height: 600,
+ *   zoom: 13
+ * });
+ * ```
+ */
+export function createTestMap(options: CreateTestMapOptions = {}): LeafletHeadlessMap {
+  // ...
+}
+```
+
 ## Notes
 
 - The `docs-dist` folder is generated and should not be committed to git
@@ -116,3 +168,4 @@ The workflow:
 - The same `examples.js` configuration is used for both client and server rendering
 - Examples use Leaflet 1.9.4 loaded from CDN for client-side rendering
 - Server-side rendering uses the built leaflet-node library
+- API documentation is auto-generated from TSDoc comments using TypeDoc

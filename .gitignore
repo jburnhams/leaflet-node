@@ -10,6 +10,7 @@ docs-dist/
 # Test outputs
 test/actual/
 tests/actual/
+tests/fixtures/
 coverage/
 
 # Logs

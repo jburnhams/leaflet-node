@@ -14,7 +14,13 @@ export interface TileLoadProgress {
 export interface WaitForTilesOptions {
   /** Timeout in milliseconds before rejecting the promise. */
   timeout?: number;
-  /** Callback invoked whenever tile progress changes. */
+  /**
+   * Callback invoked whenever tile progress changes.
+   *
+   * Note: May not fire if tiles load very quickly (< 10ms), such as when tiles
+   * are already cached or the network is extremely fast. Consider this callback
+   * optional for assertion purposes.
+   */
   onProgress?: (progress: TileLoadProgress) => void;
 }
 
@@ -83,12 +89,25 @@ export function createTestMap(options: CreateTestMapOptions = {}): LeafletHeadle
 export async function cleanupTestMaps(): Promise<void> {
   trackedMaps.forEach((map) => {
     try {
+      // Cancel any pending animation frames on Canvas and SVG renderers
+      map.eachLayer((layer) => {
+        const layerWithFrame = layer as any;
+        // Access internal _frame property to cancel pending animation frames
+        if ((layer instanceof LDefault.Canvas || layer instanceof LDefault.SVG) && layerWithFrame._frame) {
+          LDefault.Util.cancelAnimFrame(layerWithFrame._frame);
+          layerWithFrame._frame = null;
+        }
+      });
+
       map.remove();
     } catch (error) {
       console.warn('leaflet-node: failed to remove map during cleanup', error);
     }
   });
   trackedMaps.clear();
+
+  // Small delay to let any remaining async operations complete
+  await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
 function invokeProgress(

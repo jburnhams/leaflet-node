@@ -82,6 +82,32 @@ test('render map', async () => {
 });
 ```
 
+### Known Issues
+
+**Tile Loading Warnings:**
+
+You may see warnings about "dynamic import callback" or "experimental-vm-modules" when running tests with tile layers in Jest. This is a Jest limitation with VM modules and doesn't affect the actual rendering—tiles that load successfully are rendered correctly.
+
+To suppress these warnings, you can:
+
+1. Run Jest with experimental VM modules support:
+```bash
+NODE_OPTIONS='--experimental-vm-modules' jest
+```
+
+2. Or configure Jest to use isolated modules:
+```js
+// jest.config.js
+export default {
+  testEnvironment: 'node',
+  globals: {
+    'ts-jest': {
+      isolatedModules: true
+    }
+  }
+};
+```
+
 > [!TIP]
 > Need a ready-to-use map in tests? `leaflet-node/testing` exposes `createTestMap`, `cleanupTestMaps`, `waitForTiles`, and `waitForMapReady` helpers that work in both Vitest and Jest.
 

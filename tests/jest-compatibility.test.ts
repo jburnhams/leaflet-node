@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 
 /**
  * Jest Compatibility Tests
@@ -249,6 +250,34 @@ describe('Jest Compatibility', () => {
 
         await loadPromise;
       }, 15000);
+    });
+  });
+
+  describe('Jest regression integration suite', () => {
+    it('should execute the Jest/jsdom fixture without errors', () => {
+      const jestBin = path.resolve(process.cwd(), 'node_modules', 'jest', 'bin', 'jest.js');
+      const configPath = path.resolve(__dirname, 'jest-fixture/jest.config.cjs');
+
+      const result = spawnSync(process.execPath, [jestBin, '--config', configPath, '--runInBand'], {
+        cwd: path.resolve(__dirname, 'jest-fixture'),
+        env: {
+          ...process.env,
+          NODE_OPTIONS: [process.env.NODE_OPTIONS, '--experimental-vm-modules']
+            .filter(Boolean)
+            .join(' '),
+        },
+        encoding: 'utf8',
+      });
+
+      if (result.status !== 0) {
+        console.error(result.stdout);
+        console.error(result.stderr);
+      }
+
+      const combinedOutput = `${result.stdout}${result.stderr}`;
+
+      expect(result.status).toBe(0);
+      expect(combinedOutput).toMatch(/Tests:\s+4 passed/);
     });
   });
 });

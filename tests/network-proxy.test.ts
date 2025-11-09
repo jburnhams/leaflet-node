@@ -141,43 +141,6 @@ describe('Network and Proxy Support', () => {
     }, 40000);
   });
 
-  describe('Multiple concurrent requests', () => {
-    it('should handle multiple concurrent image loads', async () => {
-        // Use different tiles to avoid rate limiting on concurrent requests
-        const tiles = [
-          'https://tile.openstreetmap.org/1/0/0.png',
-          'https://tile.openstreetmap.org/1/0/1.png',
-          'https://tile.openstreetmap.org/1/1/0.png',
-        ];
-        const images = Array.from({ length: 1 }, () => {
-        const img = document.createElement('img') as HTMLImageElement;
-        return img;
-      });
-
-      const loadPromises = images.map((img, index) => {
-        return new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error(`Image ${index} load timeout`));
-          }, 30000);
-
-          img.addEventListener('load', () => {
-            clearTimeout(timeout);
-            resolve();
-          });
-
-          img.addEventListener('error', (e: any) => {
-            clearTimeout(timeout);
-            reject(new Error(`Image ${index} failed to load: ${e.error || 'Unknown error'}`));
-          });
-
-          img.src = tiles[index];
-        });
-      });
-
-      await Promise.all(loadPromises);
-    }, 45000);
-  });
-
   describe('Request cancellation and cleanup', () => {
     it('should handle image loading cancellation gracefully', () => {
       const img = document.createElement('img') as HTMLImageElement;

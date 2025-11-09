@@ -8,22 +8,14 @@ import { Image as CanvasImage } from '@napi-rs/canvas';
 import type { Dispatcher } from 'undici';
 import { ensureReadableStream } from './polyfills/readable-stream.js';
 
-type UndiciModule = typeof import('undici');
+// Ensure ReadableStream polyfill is available before importing undici
+ensureReadableStream();
 
-let undiciModulePromise: Promise<UndiciModule> | null = null;
-
-async function loadUndiciModule(): Promise<UndiciModule> {
-  if (!undiciModulePromise) {
-    ensureReadableStream();
-    undiciModulePromise = import('undici');
-  }
-
-  return undiciModulePromise;
-}
+import * as undici from 'undici';
 
 let cachedDispatcher: Dispatcher | null | undefined;
 
-async function resolveProxyDispatcher(undici: UndiciModule): Promise<Dispatcher | null> {
+async function resolveProxyDispatcher(): Promise<Dispatcher | null> {
   if (cachedDispatcher !== undefined) {
     return cachedDispatcher;
   }
@@ -67,8 +59,7 @@ async function fileExists(path: string): Promise<boolean> {
  * Load image from HTTP/HTTPS URL
  */
 async function loadFromUrl(url: string): Promise<Buffer> {
-  const undici = await loadUndiciModule();
-  const dispatcher = await resolveProxyDispatcher(undici);
+  const dispatcher = await resolveProxyDispatcher();
   const response = await undici.fetch(url, dispatcher ? { dispatcher } : undefined);
 
   if (!response.ok) {

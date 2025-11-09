@@ -36,6 +36,29 @@ export function ensureUndiciPolyfills(): void {
   (globalThis as any).setTimeout = function(...args: any[]) {
     const timer = originalSetTimeout.apply(this, args as any);
 
+    if (typeof timer === 'number') {
+      const wrappedTimer: any = {
+        id: timer,
+        ref() {
+          return this;
+        },
+        unref() {
+          return this;
+        },
+      };
+
+      wrappedTimer.valueOf = () => timer;
+
+      if (typeof Symbol !== 'undefined' && Symbol.toPrimitive) {
+        Object.defineProperty(wrappedTimer, Symbol.toPrimitive, {
+          value: () => timer,
+          configurable: true,
+        });
+      }
+
+      return wrappedTimer;
+    }
+
     // Add unref() and ref() methods if they don't exist
     if (typeof (timer as any).unref !== 'function') {
       (timer as any).unref = function() { return this; };

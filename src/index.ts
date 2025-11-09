@@ -16,8 +16,10 @@ import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
 import { ensureReadableStream } from './polyfills/readable-stream.js';
+import { ensureUndiciPolyfills } from './polyfills/undici.js';
 
 ensureReadableStream();
+ensureUndiciPolyfills();
 
 // Extend global namespace for headless environment
 declare global {

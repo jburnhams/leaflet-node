@@ -1,6 +1,8 @@
 import type * as L from 'leaflet';
 import LDefault from './index.js';
 import type { LeafletHeadlessMap } from './types.js';
+import { resetReadableStreamPolyfillForTests } from './polyfills/readable-stream.js';
+import { resetUndiciPolyfillsForTests } from './polyfills/undici.js';
 
 export interface TileLoadProgress {
   /** Number of tiles that loaded successfully. */
@@ -253,3 +255,6 @@ export async function waitForMapReady(
 }
 
 export { LDefault as Leaflet };
+
+// Re-export polyfill utilities for advanced testing scenarios
+export { resetReadableStreamPolyfillForTests, resetUndiciPolyfillsForTests };

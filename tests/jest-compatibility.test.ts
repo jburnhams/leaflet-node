@@ -247,6 +247,31 @@ describe('Jest Compatibility', () => {
         expect(onloadCalled).toBe(true);
       }, 10000);
 
+      it('should fire load event when src is set on createElement img', async () => {
+        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        (global as any).document.body.appendChild(img);
+
+        const loaded = new Promise<boolean>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Timeout'));
+          }, 5000);
+
+          img.addEventListener('load', () => {
+            clearTimeout(timeout);
+            resolve(true);
+          });
+        });
+
+        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        await expect(loaded).resolves.toBe(true);
+        expect(img.width).toBe(1);
+        expect(img.height).toBe(1);
+
+        // Cleanup
+        (global as any).document.body.removeChild(img);
+      }, 10000);
+
       it('should trigger error event for invalid images', async () => {
         const img = (global as any).document.createElement('img') as HTMLImageElement;
 

@@ -164,8 +164,13 @@ describe('Network and Proxy Support', () => {
             reject(new Error(`Image ${index} failed to load: ${e.error || 'Unknown error'}`));
           });
 
-          // Use same valid tile for all to ensure success
-          img.src = 'https://tile.openstreetmap.org/0/0/0.png';
+          // Use different tiles to avoid rate limiting on concurrent requests
+          const tiles = [
+            'https://tile.openstreetmap.org/1/0/0.png',
+            'https://tile.openstreetmap.org/1/0/1.png',
+            'https://tile.openstreetmap.org/1/1/0.png',
+          ];
+          img.src = tiles[index];
         });
       });
 

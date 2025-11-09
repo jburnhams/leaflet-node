@@ -32,22 +32,25 @@ export function ensureUndiciPolyfills(): void {
 
   // Polyfill setTimeout().unref() and ref() methods
   // These methods are used by undici to prevent timers from keeping the process alive
+  const wrappedTimerIds = new Map<any, number>();
   const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+
   (globalThis as any).setTimeout = function(...args: any[]) {
     const timer = originalSetTimeout.apply(this, args as any);
 
     if (typeof timer === 'number') {
       const wrappedTimer: any = {
-        id: timer,
         ref() {
           return this;
         },
         unref() {
           return this;
         },
+        valueOf() {
+          return timer;
+        },
       };
-
-      wrappedTimer.valueOf = () => timer;
 
       if (typeof Symbol !== 'undefined' && Symbol.toPrimitive) {
         Object.defineProperty(wrappedTimer, Symbol.toPrimitive, {
@@ -56,6 +59,7 @@ export function ensureUndiciPolyfills(): void {
         });
       }
 
+      wrappedTimerIds.set(wrappedTimer, timer);
       return wrappedTimer;
     }
 
@@ -68,6 +72,16 @@ export function ensureUndiciPolyfills(): void {
     }
 
     return timer;
+  };
+
+  (globalThis as any).clearTimeout = function(id: any) {
+    if (wrappedTimerIds.has(id)) {
+      const numericId = wrappedTimerIds.get(id)!;
+      wrappedTimerIds.delete(id);
+      return originalClearTimeout.call(this, numericId as any);
+    }
+
+    return originalClearTimeout.call(this, id as any);
   };
 
   // Polyfill performance.markResourceTiming()

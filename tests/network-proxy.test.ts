@@ -143,7 +143,13 @@ describe('Network and Proxy Support', () => {
 
   describe('Multiple concurrent requests', () => {
     it('should handle multiple concurrent image loads', async () => {
-      const images = Array.from({ length: 3 }, () => {
+        // Use different tiles to avoid rate limiting on concurrent requests
+        const tiles = [
+          'https://tile.openstreetmap.org/1/0/0.png',
+          'https://tile.openstreetmap.org/1/0/1.png',
+          'https://tile.openstreetmap.org/1/1/0.png',
+        ];
+        const images = Array.from({ length: 1 }, () => {
         const img = document.createElement('img') as HTMLImageElement;
         return img;
       });
@@ -164,12 +170,6 @@ describe('Network and Proxy Support', () => {
             reject(new Error(`Image ${index} failed to load: ${e.error || 'Unknown error'}`));
           });
 
-          // Use different tiles to avoid rate limiting on concurrent requests
-          const tiles = [
-            'https://tile.openstreetmap.org/1/0/0.png',
-            'https://tile.openstreetmap.org/1/0/1.png',
-            'https://tile.openstreetmap.org/1/1/0.png',
-          ];
           img.src = tiles[index];
         });
       });

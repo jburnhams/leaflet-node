@@ -6,6 +6,7 @@
  * and headless rendering.
  */
 
+import './polyfills/apply.js';
 import { JSDOM } from 'jsdom';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -15,11 +16,6 @@ import type { LeafletHeadlessMap, HeadlessOptions, ImageExportOptions } from './
 import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
-import { ensureReadableStream } from './polyfills/readable-stream.js';
-import { ensureUndiciPolyfills } from './polyfills/undici.js';
-
-ensureReadableStream();
-ensureUndiciPolyfills();
 
 // Extend global namespace for headless environment
 declare global {

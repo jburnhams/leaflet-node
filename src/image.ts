@@ -3,17 +3,10 @@
  * Supports loading images from HTTP/HTTPS URLs and local file paths
  */
 
+import './polyfills/apply.js';
 import { promises as fs } from 'fs';
 import { Image as CanvasImage } from '@napi-rs/canvas';
-import type { Dispatcher } from 'undici';
-import { ensureReadableStream } from './polyfills/readable-stream.js';
-import { ensureUndiciPolyfills } from './polyfills/undici.js';
-
-// Ensure polyfills are available before importing undici
-ensureReadableStream();
-ensureUndiciPolyfills();
-
-import * as undici from 'undici';
+import { ProxyAgent, fetch, type Dispatcher } from 'undici';
 
 let cachedDispatcher: Dispatcher | null | undefined;
 
@@ -32,7 +25,11 @@ async function resolveProxyDispatcher(): Promise<Dispatcher | null> {
     env.all_proxy ||
     null;
 
-  cachedDispatcher = proxyUrl ? new undici.ProxyAgent(proxyUrl) : null;
+  if (proxyUrl) {
+    cachedDispatcher = new ProxyAgent(proxyUrl);
+  } else {
+    cachedDispatcher = null;
+  }
   return cachedDispatcher;
 }
 import type { HeadlessImage } from './types.js';
@@ -62,7 +59,7 @@ async function fileExists(path: string): Promise<boolean> {
  */
 async function loadFromUrl(url: string): Promise<Buffer> {
   const dispatcher = await resolveProxyDispatcher();
-  const response = await undici.fetch(url, dispatcher ? { dispatcher } : undefined);
+  const response = await fetch(url, dispatcher ? { dispatcher } : undefined);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch image from ${url}: ${response.status} ${response.statusText}`);

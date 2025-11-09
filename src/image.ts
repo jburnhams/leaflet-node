@@ -7,9 +7,11 @@ import { promises as fs } from 'fs';
 import { Image as CanvasImage } from '@napi-rs/canvas';
 import type { Dispatcher } from 'undici';
 import { ensureReadableStream } from './polyfills/readable-stream.js';
+import { ensureUndiciPolyfills } from './polyfills/undici.js';
 
-// Ensure ReadableStream polyfill is available before importing undici
+// Ensure polyfills are available before importing undici
 ensureReadableStream();
+ensureUndiciPolyfills();
 
 import * as undici from 'undici';
 

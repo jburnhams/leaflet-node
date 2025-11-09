@@ -16,8 +16,10 @@ import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
 import { ensureReadableStream } from './polyfills/readable-stream.js';
+import { ensureUndiciPolyfills } from './polyfills/undici.js';
 
 ensureReadableStream();
+ensureUndiciPolyfills();
 
 // Extend global namespace for headless environment
 declare global {
@@ -88,23 +90,43 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
       }
 
       const load = async () => {
+        const timeoutMs = 30000; // 30 second timeout
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Image load timeout after ${timeoutMs}ms: ${value}`));
+          }, timeoutMs);
+        });
+
         try {
-          const canvasImage = await loadImageSource(value);
+          // Race between loading the image and the timeout
+          const canvasImage = await Promise.race([
+            loadImageSource(value),
+            timeoutPromise
+          ]);
+
           (this as any)._napiImage = canvasImage;
           this.width = canvasImage.width;
           this.height = canvasImage.height;
+
           const loadEvent = new dom.window.Event('load');
           this.dispatchEvent(loadEvent);
         } catch (error) {
+          // Enhanced error logging for debugging
+          console.error('Image load failed:', {
+            src: value,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
+
+          // Always dispatch error event to prevent silent hangs
           const errorEvent = new dom.window.Event('error');
           (errorEvent as any).error = error;
           this.dispatchEvent(errorEvent);
         }
       };
 
-      load().catch((error) => {
-        console.error('Error loading image element:', error);
-      });
+      // Invoke load without additional catch to avoid double error handling
+      load();
     }
   });
 

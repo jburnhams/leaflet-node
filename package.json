@@ -33,7 +33,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup && tsx scripts/copy-assets.ts",
+    "build": "tsx scripts/build-wrapper.ts",
     "dev": "tsup --watch",
     "test": "npm run test:unit && npm run test:docs",
     "test:unit": "vitest run --exclude tests/docs.test.ts",

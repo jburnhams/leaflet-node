@@ -205,4 +205,56 @@ describe('Tile Events', () => {
       expect(tileunloadSpy).toHaveBeenCalled();
     });
   });
+
+  describe('TileLayer loading state', () => {
+    it('reports not loading after tiles complete', async () => {
+      const tileLayer = L.tileLayer(getTileFixtureUrl(), {
+        tileSize: 256,
+        minZoom: 0,
+        maxZoom: 0,
+      });
+
+      map.addLayer(tileLayer);
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Tile load timeout'));
+        }, 10000);
+
+        tileLayer.once('load', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+
+      // Should not be loading after load completes
+      const isLoadingAfter = tileLayer.isLoading();
+      expect(isLoadingAfter).toBe(false);
+    });
+
+    it('works with data URI tiles', async () => {
+      const dataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const tileLayer = L.tileLayer(dataUri);
+
+      let loadFired = false;
+      tileLayer.on('load', () => {
+        loadFired = true;
+      });
+
+      map.addLayer(tileLayer);
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Data URI tile load timeout'));
+        }, 5000);
+
+        tileLayer.once('load', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      });
+
+      expect(loadFired).toBe(true);
+    });
+  });
 });

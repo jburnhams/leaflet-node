@@ -95,7 +95,7 @@ describe('Network and Proxy Support', () => {
 
   describe('Network error handling', () => {
     it('should handle invalid URLs gracefully', async () => {
-      const img = (global as any).document.createElement('img') as HTMLImageElement;
+      const img = document.createElement('img') as HTMLImageElement;
 
       const errorPromise = new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -119,7 +119,7 @@ describe('Network and Proxy Support', () => {
     }, 15000);
 
     it('should handle network timeouts', async () => {
-      const img = (global as any).document.createElement('img') as HTMLImageElement;
+      const img = document.createElement('img') as HTMLImageElement;
 
       let errorOccurred = false;
 
@@ -144,7 +144,7 @@ describe('Network and Proxy Support', () => {
   describe('Multiple concurrent requests', () => {
     it('should handle multiple concurrent image loads', async () => {
       const images = Array.from({ length: 3 }, () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
         return img;
       });
 
@@ -180,7 +180,7 @@ describe('Network and Proxy Support', () => {
 
   describe('Request cancellation and cleanup', () => {
     it('should handle image loading cancellation gracefully', () => {
-      const img = (global as any).document.createElement('img') as HTMLImageElement;
+      const img = document.createElement('img') as HTMLImageElement;
 
       // Start loading
       img.src = 'https://tile.openstreetmap.org/0/0/0.png';
@@ -200,7 +200,7 @@ describe('Network and Proxy Support', () => {
       expect(document).toBeDefined();
       expect(window).toBeDefined();
       // Verify we can create Image elements
-      const img = (global as any).document.createElement('img');
+      const img = document.createElement('img');
       expect(img).toBeDefined();
       expect(img.tagName).toBe('IMG');
     });

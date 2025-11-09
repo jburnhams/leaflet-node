@@ -52,16 +52,41 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
     return (global as any).L;
   }
 
-  // Create fake DOM environment using jsdom
-  const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
-    url: 'http://localhost',
-    pretendToBeVisual: true,
-    resources: 'usable',
-  });
+  // Detect if a DOM environment already exists (e.g., from test framework)
+  const existingDocument = (global as any).document;
+  const existingWindow = (global as any).window;
+  const hasExistingDom = existingDocument && existingWindow;
 
-  // Set up global environment
-  (global as any).document = dom.window.document;
-  (global as any).window = dom.window;
+  let dom: JSDOM;
+
+  if (hasExistingDom) {
+    // Reuse existing jsdom instance from test framework
+    // Try to get the JSDOM instance from the window object
+    const jsdomFromWindow = existingWindow && (existingWindow as any)[Symbol.for('jsdom.jsdom')];
+
+    if (jsdomFromWindow) {
+      dom = jsdomFromWindow;
+    } else {
+      // If we can't get the JSDOM instance but have document/window,
+      // create a minimal wrapper to satisfy our needs
+      dom = {
+        window: existingWindow
+      } as JSDOM;
+    }
+  } else {
+    // Create new fake DOM environment using jsdom
+    dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
+      url: 'http://localhost',
+      pretendToBeVisual: true,
+      resources: 'usable',
+    });
+
+    // Set up global environment
+    (global as any).document = dom.window.document;
+    (global as any).window = dom.window;
+  }
+
+  // Set up Image polyfill regardless of whether DOM was existing or new
   (global as any).Image = HeadlessImage;
   (dom.window as any).Image = HeadlessImage;
 

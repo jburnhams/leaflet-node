@@ -160,7 +160,7 @@ describe('Jest Compatibility', () => {
       });
 
       it('should trigger load event for valid images via addEventListener', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         const loadPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -185,7 +185,7 @@ describe('Jest Compatibility', () => {
       }, 10000);
 
       it('should trigger load event via onload property', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         const loadPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -211,7 +211,7 @@ describe('Jest Compatibility', () => {
       }, 10000);
 
       it('should fire both addEventListener and onload for same event', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         let addEventListenerCalled = false;
         let onloadCalled = false;
@@ -248,8 +248,8 @@ describe('Jest Compatibility', () => {
       }, 10000);
 
       it('should fire load event when src is set on createElement img', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
-        (global as any).document.body.appendChild(img);
+        const img = document.createElement('img') as HTMLImageElement;
+        document.body.appendChild(img);
 
         const loaded = new Promise<boolean>((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -269,11 +269,11 @@ describe('Jest Compatibility', () => {
         expect(img.height).toBe(1);
 
         // Cleanup
-        (global as any).document.body.removeChild(img);
+        document.body.removeChild(img);
       }, 10000);
 
       it('should trigger error event for invalid images', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         const errorPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -298,7 +298,7 @@ describe('Jest Compatibility', () => {
       }, 10000);
 
       it('should timeout and trigger error event for hanging requests', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         // This test verifies that the timeout mechanism works
         // We use a valid domain that should respond, but if undici hangs,
@@ -325,7 +325,7 @@ describe('Jest Compatibility', () => {
 
     describe('Image loading with undici', () => {
       it('should successfully load images from HTTP URLs', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         const loadPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {

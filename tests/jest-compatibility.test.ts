@@ -127,6 +127,17 @@ describe('Jest Compatibility', () => {
         expect(result).toBe(timer);
         clearTimeout(timer);
       });
+
+      it('should allow clearTimeout with wrapped timer objects', () => {
+        const timer = setTimeout(() => {}, 1000);
+        expect(() => clearTimeout(timer)).not.toThrow();
+      });
+
+      it('should allow clearTimeout with unwrapped timer IDs', () => {
+        const timer = setTimeout(() => {}, 1000);
+        const numericId = timer.valueOf();
+        expect(() => clearTimeout(numericId as any)).not.toThrow();
+      });
     });
 
     describe('Performance polyfills', () => {
@@ -148,8 +159,8 @@ describe('Jest Compatibility', () => {
         expect(L).toBeDefined();
       });
 
-      it('should trigger load event for valid images', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+      it('should trigger load event for valid images via addEventListener', async () => {
+        const img = document.createElement('img') as HTMLImageElement;
 
         const loadPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -173,8 +184,96 @@ describe('Jest Compatibility', () => {
         await loadPromise;
       }, 10000);
 
+      it('should trigger load event via onload property', async () => {
+        const img = document.createElement('img') as HTMLImageElement;
+
+        const loadPromise = new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Image onload did not fire within 5 seconds'));
+          }, 5000);
+
+          img.onload = () => {
+            clearTimeout(timeout);
+            expect(img.width).toBe(1);
+            expect(img.height).toBe(1);
+            resolve();
+          };
+
+          img.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Image onerror should not have fired'));
+          };
+        });
+
+        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        await loadPromise;
+      }, 10000);
+
+      it('should fire both addEventListener and onload for same event', async () => {
+        const img = document.createElement('img') as HTMLImageElement;
+
+        let addEventListenerCalled = false;
+        let onloadCalled = false;
+
+        const bothCalledPromise = new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error(`Timeout - addEventListener: ${addEventListenerCalled}, onload: ${onloadCalled}`));
+          }, 5000);
+
+          const checkBoth = () => {
+            if (addEventListenerCalled && onloadCalled) {
+              clearTimeout(timeout);
+              resolve();
+            }
+          };
+
+          img.addEventListener('load', () => {
+            addEventListenerCalled = true;
+            checkBoth();
+          });
+
+          img.onload = () => {
+            onloadCalled = true;
+            checkBoth();
+          };
+        });
+
+        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        await bothCalledPromise;
+
+        expect(addEventListenerCalled).toBe(true);
+        expect(onloadCalled).toBe(true);
+      }, 10000);
+
+      it('should fire load event when src is set on createElement img', async () => {
+        const img = document.createElement('img') as HTMLImageElement;
+        document.body.appendChild(img);
+
+        const loaded = new Promise<boolean>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Timeout'));
+          }, 5000);
+
+          img.addEventListener('load', () => {
+            clearTimeout(timeout);
+            resolve(true);
+          });
+        });
+
+        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        await expect(loaded).resolves.toBe(true);
+        expect(img.width).toBe(1);
+        expect(img.height).toBe(1);
+
+        // Cleanup
+        document.body.removeChild(img);
+      }, 10000);
+
       it('should trigger error event for invalid images', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         const errorPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -199,7 +298,7 @@ describe('Jest Compatibility', () => {
       }, 10000);
 
       it('should timeout and trigger error event for hanging requests', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         // This test verifies that the timeout mechanism works
         // We use a valid domain that should respond, but if undici hangs,
@@ -226,7 +325,7 @@ describe('Jest Compatibility', () => {
 
     describe('Image loading with undici', () => {
       it('should successfully load images from HTTP URLs', async () => {
-        const img = (global as any).document.createElement('img') as HTMLImageElement;
+        const img = document.createElement('img') as HTMLImageElement;
 
         const loadPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {

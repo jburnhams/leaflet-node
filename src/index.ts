@@ -91,8 +91,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 
       const load = async () => {
         const timeoutMs = 30000; // 30 second timeout
+        let timeoutHandle: NodeJS.Timeout | undefined;
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
+          timeoutHandle = setTimeout(() => {
             reject(new Error(`Image load timeout after ${timeoutMs}ms: ${value}`));
           }, timeoutMs);
         });
@@ -122,6 +123,11 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
           const errorEvent = new dom.window.Event('error');
           (errorEvent as any).error = error;
           this.dispatchEvent(errorEvent);
+        } finally {
+          // Clear the timeout to prevent keeping the process alive
+          if (timeoutHandle !== undefined) {
+            clearTimeout(timeoutHandle);
+          }
         }
       };
 

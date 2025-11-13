@@ -1,5 +1,6 @@
-import type * as L from 'leaflet';
-import LDefault from './index.js';
+import type { LatLngExpression, Map as LeafletMap, MapOptions, TileLayer } from 'leaflet';
+import LeafletPatched from './index.js';
+export * from './index.js';
 import type { LeafletHeadlessMap } from './types.js';
 import { resetReadableStreamPolyfillForTests } from './polyfills/readable-stream.js';
 import { resetUndiciPolyfillsForTests } from './polyfills/undici.js';
@@ -30,20 +31,20 @@ export interface WaitForMapReadyOptions extends WaitForTilesOptions {
   /**
    * Callback invoked whenever an individual tile layer reports progress.
    */
-  onTileProgress?: (layer: L.TileLayer, progress: TileLoadProgress) => void;
+  onTileProgress?: (layer: TileLayer, progress: TileLoadProgress) => void;
 }
 
 export interface CreateTestMapOptions {
   width?: number;
   height?: number;
   zoom?: number;
-  center?: L.LatLngExpression;
-  mapOptions?: L.MapOptions;
+  center?: LatLngExpression;
+  mapOptions?: MapOptions;
 }
 
-const trackedMaps = new Set<L.Map>();
+const trackedMaps = new Set<LeafletMap>();
 
-function getTileLayers(map: L.Map): L.TileLayer[] {
+function getTileLayers(map: LeafletMap): TileLayer[] {
   const layers = Object.values((map as any)._layers ?? {}) as any[];
   return layers.filter((layer) => typeof layer.getTileUrl === 'function');
 }
@@ -74,7 +75,12 @@ export function createTestMap(options: CreateTestMapOptions = {}): LeafletHeadle
   container.style.width = `${width}px`;
   container.style.height = `${height}px`;
 
-  const map = LDefault.map(container, mapOptions) as LeafletHeadlessMap;
+  const documentBody = (global as any).document?.body;
+  if (documentBody && !container.parentNode) {
+    documentBody.appendChild(container);
+  }
+
+  const map = LeafletPatched.map(container, mapOptions) as LeafletHeadlessMap;
 
   if (center) {
     map.setView(center, zoom);
@@ -95,13 +101,18 @@ export async function cleanupTestMaps(): Promise<void> {
       map.eachLayer((layer) => {
         const layerWithFrame = layer as any;
         // Access internal _frame property to cancel pending animation frames
-        if ((layer instanceof LDefault.Canvas || layer instanceof LDefault.SVG) && layerWithFrame._frame) {
-          LDefault.Util.cancelAnimFrame(layerWithFrame._frame);
+        if ((layer instanceof LeafletPatched.Canvas || layer instanceof LeafletPatched.SVG) && layerWithFrame._frame) {
+          LeafletPatched.Util.cancelAnimFrame(layerWithFrame._frame);
           layerWithFrame._frame = null;
         }
       });
 
       map.remove();
+
+      const container = typeof map.getContainer === 'function' ? map.getContainer() : undefined;
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
     } catch (error) {
       console.warn('leaflet-node: failed to remove map during cleanup', error);
     }
@@ -122,7 +133,7 @@ function invokeProgress(
 }
 
 export function waitForTiles(
-  tileLayer: L.TileLayer,
+  tileLayer: TileLayer,
   options: WaitForTilesOptions = {}
 ): Promise<void> {
   const { timeout = 45000, onProgress } = options;
@@ -210,7 +221,7 @@ export function waitForTiles(
 }
 
 export async function waitForMapReady(
-  map: L.Map,
+  map: LeafletMap,
   options: WaitForMapReadyOptions = {}
 ): Promise<void> {
   const { timeout = 45000, onProgress, onTileProgress } = options;
@@ -254,7 +265,8 @@ export async function waitForMapReady(
   );
 }
 
-export { LDefault as Leaflet };
+export { LeafletPatched as Leaflet };
+export default LeafletPatched;
 
 // Re-export polyfill utilities for advanced testing scenarios
 export { resetReadableStreamPolyfillForTests, resetUndiciPolyfillsForTests };

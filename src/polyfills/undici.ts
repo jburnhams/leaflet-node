@@ -88,7 +88,7 @@ export function ensureUndiciPolyfills(): void {
   // undici calls this for performance metrics, we provide a no-op implementation
   if (typeof globalThis.performance !== 'undefined') {
     if (typeof (globalThis.performance as any).markResourceTiming !== 'function') {
-      (globalThis.performance as any).markResourceTiming = (...args: any[]) => {
+      (globalThis.performance as any).markResourceTiming = (..._args: any[]) => {
         // No-op: markResourceTiming is optional and only used for performance monitoring
         // Accept any arguments to prevent errors
       };

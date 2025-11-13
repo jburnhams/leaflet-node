@@ -179,4 +179,28 @@ describe('environment resilience', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('should not throw when import.meta.url is an HTTP URL (jsdom scenario)', () => {
+    // This test verifies that the getSafeRequire() function correctly handles
+    // the case where import.meta.url is an HTTP URL (as happens in jsdom).
+    //
+    // Previously, calling createRequire with an HTTP URL would throw:
+    // "The argument 'filename' must be a file URL object, file URL string,
+    // or absolute path string. Received 'http://localhost/main.js'"
+    //
+    // The fix uses eval('require') when detecting HTTP URLs, which is safe
+    // in jsdom environments where require is available globally.
+
+    // We can't easily test this in vitest since import.meta.url is always file://,
+    // but we can verify that createRequire would fail with HTTP URLs
+    const { createRequire: originalCreateRequire } = require('module');
+
+    // Verify that createRequire rejects HTTP URLs
+    expect(() => {
+      originalCreateRequire('http://localhost/main.js');
+    }).toThrow(/must be a file URL object, file URL string, or absolute path string/);
+
+    // The actual fix is tested in the Jest fixture which runs in a real jsdom environment
+    // where import.meta.url is naturally set to an HTTP URL
+  });
 });

@@ -368,10 +368,10 @@ describe('Jest Compatibility', () => {
         encoding: 'utf8',
       });
 
-      if (result.status !== 0) {
-        console.error(result.stdout);
-        console.error(result.stderr);
-      }
+      // Always print output for debugging
+      console.log('Jest STDOUT:', result.stdout);
+      console.log('Jest STDERR:', result.stderr);
+      console.log('Jest exit code:', result.status);
 
       const combinedOutput = `${result.stdout}${result.stderr}`;
 

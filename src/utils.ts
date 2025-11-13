@@ -47,34 +47,58 @@ export function getSafeRequire(): NodeJS.Require {
   // Get import.meta.url safely without triggering bundler polyfills
   const importMetaUrl = getImportMetaUrlSafely();
 
-  // If we can't get import.meta.url, fall back to eval('require')
-  // This can happen in some test environments or edge cases
+  // If we can't get import.meta.url, try alternative approaches
   if (!importMetaUrl) {
+    // Try eval('require') first
     try {
       // eslint-disable-next-line no-eval
       return eval('require') as NodeJS.Require;
     } catch {
-      // If require is not available and we can't get import.meta.url,
-      // we're in an unsupported environment
-      throw new Error('Cannot get require function: neither require nor import.meta.url are available');
+      // require not available in eval context
     }
+
+    // Try using __filename if available (CommonJS or some ESM shims)
+    if (typeof __filename !== 'undefined') {
+      try {
+        return createRequire(__filename);
+      } catch {
+        // __filename is not a valid path for createRequire
+      }
+    }
+
+    // Try using process.cwd() as a last resort
+    if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+      try {
+        // Create a file URL from the current working directory
+        const cwdUrl = new URL(`file://${process.cwd()}/`).href;
+        return createRequire(cwdUrl);
+      } catch {
+        // process.cwd() approach failed
+      }
+    }
+
+    // If all else fails, throw an error
+    throw new Error('Cannot get require function: neither require nor import.meta.url are available');
   }
 
   // Check if import.meta.url looks like it's from jsdom (HTTP/HTTPS)
   const importMetaUrlIsHttp = importMetaUrl.startsWith('http://') ||
                               importMetaUrl.startsWith('https://');
 
+  // For HTTP URLs (from jsdom), try eval('require') first since createRequire won't work
+  // But if that fails, still attempt createRequire as a last resort
   if (importMetaUrlIsHttp) {
     try {
       // eslint-disable-next-line no-eval
       return eval('require') as NodeJS.Require;
     } catch {
-      // If require is not available in jsdom with HTTP URL,
-      // we're in an unsupported environment (e.g., Jest with ESM)
-      throw new Error('Cannot get require function: require is not available in this jsdom environment');
+      // require is not available (e.g., Jest with ESM)
+      // Fall through to try createRequire anyway - it will likely fail but might work
+      // in some edge cases
     }
   }
 
-  // Use createRequire() as normal for Node.js
+  // Use createRequire() for file:// URLs or as a last resort for HTTP URLs
+  // For HTTP URLs, this will likely throw, but that's the best we can do
   return createRequire(importMetaUrl);
 }

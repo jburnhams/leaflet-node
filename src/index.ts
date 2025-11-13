@@ -269,9 +269,13 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   (global as any).L = L;
 
   // Set icon path for markers
-  const scriptName = leafletPath.split(path.sep).pop() || '';
-  const leafletDir = leafletPath.substring(0, leafletPath.length - scriptName.length);
-  L.Icon.Default.imagePath = `file://${leafletDir}images${path.sep}`;
+  // Note: L.Icon.Default may not be initialized yet in some environments (e.g., Jest/jsdom)
+  // In those cases, we can skip setting the image path as it will be set when the first icon is created
+  if (L.Icon && L.Icon.Default) {
+    const scriptName = leafletPath.split(path.sep).pop() || '';
+    const leafletDir = leafletPath.substring(0, leafletPath.length - scriptName.length);
+    L.Icon.Default.imagePath = `file://${leafletDir}images${path.sep}`;
+  }
 
   // Monkey-patch L.Map.prototype
   patchMapPrototype(L, opts);

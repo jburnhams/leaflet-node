@@ -56,5 +56,21 @@ describe('leaflet-node jest/jsdom integration', () => {
     expect(L.Icon).toBeDefined();
     expect(L.Icon.Default).toBeDefined();
     expect(L.Map).toBeDefined();
+
+    // Verify that the icon imagePath is set correctly for headless environment
+    expect(L.Icon.Default.imagePath).toBeDefined();
+    expect(L.Icon.Default.imagePath).toMatch(/^file:\/\//);
+    expect(L.Icon.Default.imagePath).toContain('leaflet');
+    expect(L.Icon.Default.imagePath).toContain('images');
+
+    // Verify that markers can be created successfully
+    const div = document.createElement('div');
+    const map = L.map(div).setView([51.505, -0.09], 13);
+    const marker = L.marker([51.505, -0.09]);
+
+    expect(marker).toBeDefined();
+    expect(marker.options.icon).toBeDefined();
+
+    map.remove();
   });
 });

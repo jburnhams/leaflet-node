@@ -95,6 +95,30 @@ export function createTestMap(options: CreateTestMapOptions = {}): LeafletHeadle
 }
 
 export async function cleanupTestMaps(): Promise<void> {
+  const renderers = new Set();
+
+  trackedMaps.forEach((map) => {
+    // Collect all renderers from vector layers
+    map.eachLayer((layer) => {
+      const layerWithRenderer = layer as any;
+      if (layerWithRenderer._renderer) {
+        renderers.add(layerWithRenderer._renderer);
+      }
+    });
+  });
+
+  // Cancel Canvas renderer animation frames BEFORE removing maps
+  renderers.forEach((renderer: any) => {
+    if (renderer._redrawRequest) {
+      LeafletPatched.Util.cancelAnimFrame(renderer._redrawRequest);
+      renderer._redrawRequest = null;
+    }
+  });
+
+  // Small delay to ensure frames are fully canceled
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Now proceed with existing cleanup logic
   trackedMaps.forEach((map) => {
     try {
       // Cancel any pending animation frames on Canvas and SVG renderers

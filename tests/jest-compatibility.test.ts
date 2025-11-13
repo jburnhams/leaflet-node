@@ -376,7 +376,7 @@ describe('Jest Compatibility', () => {
       const combinedOutput = `${result.stdout}${result.stderr}`;
 
       expect(result.status).toBe(0);
-      expect(combinedOutput).toMatch(/Tests:\s+4 passed/);
+      expect(combinedOutput).toMatch(/Tests:\s+5 passed/);
     });
   });
 });

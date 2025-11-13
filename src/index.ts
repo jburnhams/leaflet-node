@@ -7,10 +7,10 @@
  */
 
 import './polyfills/apply.js';
-import { JSDOM } from 'jsdom';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { createCanvas } from '@napi-rs/canvas';
+import { createRequire } from 'module';
 import type * as LeafletModule from 'leaflet';
 import type { LeafletHeadlessMap, HeadlessOptions, ImageExportOptions } from './types.js';
 import HeadlessImage, { loadImageSource } from './image.js';
@@ -57,33 +57,30 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   const existingWindow = (global as any).window;
   const hasExistingDom = existingDocument && existingWindow;
 
-  let dom: JSDOM;
+  let dom: { window: any };
 
   if (hasExistingDom) {
-    // Reuse existing jsdom instance from test framework
-    // Try to get the JSDOM instance from the window object
-    const jsdomFromWindow = existingWindow && (existingWindow as any)[Symbol.for('jsdom.jsdom')];
-
-    if (jsdomFromWindow) {
-      dom = jsdomFromWindow;
-    } else {
-      // If we can't get the JSDOM instance but have document/window,
-      // create a minimal wrapper to satisfy our needs
-      dom = {
-        window: existingWindow
-      } as JSDOM;
-    }
+    // Reuse existing DOM instance from test framework (e.g., Jest with jsdom)
+    // Don't try to create a new JSDOM instance to avoid conflicts
+    dom = {
+      window: existingWindow
+    };
   } else {
     // Create new fake DOM environment using jsdom
-    dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
+    // Use createRequire to support both CommonJS and ESM environments
+    const requireFn = createRequire(import.meta.url);
+    const { JSDOM } = requireFn('jsdom');
+    const jsdomInstance = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
       url: 'http://localhost',
       pretendToBeVisual: true,
       resources: 'usable',
     });
 
     // Set up global environment
-    (global as any).document = dom.window.document;
-    (global as any).window = dom.window;
+    (global as any).document = jsdomInstance.window.document;
+    (global as any).window = jsdomInstance.window;
+
+    dom = { window: jsdomInstance.window };
   }
 
   // Set up Image polyfill regardless of whether DOM was existing or new
@@ -248,8 +245,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   });
 
   // Load Leaflet
-  const leafletPath = require.resolve('leaflet');
-  const L = require(leafletPath) as typeof LeafletModule;
+  const requireFn = createRequire(import.meta.url);
+  const leafletPath = requireFn.resolve('leaflet');
+  const L = requireFn(leafletPath) as typeof LeafletModule;
   (global as any).L = L;
 
   // Set icon path for markers

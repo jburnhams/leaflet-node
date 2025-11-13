@@ -46,4 +46,15 @@ describe('leaflet-node jest/jsdom integration', () => {
     expect(undici).toBeDefined();
     expect(typeof undici.fetch).toBe('function');
   });
+
+  it('can import and use leaflet-node in jsdom environment', async () => {
+    // This test verifies that leaflet-node works when Jest already provides jsdom
+    const leafletNode = await import('../../src/index.js');
+    const L = leafletNode.default;
+
+    expect(L).toBeDefined();
+    expect(L.Icon).toBeDefined();
+    expect(L.Icon.Default).toBeDefined();
+    expect(L.Map).toBeDefined();
+  });
 });

@@ -4,6 +4,24 @@ import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { GlobalFonts } from '@napi-rs/canvas';
 
+/**
+ * Get a require function that works in both Node.js and jsdom environments
+ * In jsdom, import.meta.url is set to an HTTP URL which causes createRequire to fail
+ */
+function getSafeRequire(): NodeJS.Require {
+  const isJsdom = import.meta.url?.startsWith('http://') ||
+                  import.meta.url?.startsWith('https://');
+
+  if (isJsdom) {
+    // In jsdom environment, use eval('require') to get the require function
+    // eslint-disable-next-line no-eval
+    return eval('require') as NodeJS.Require;
+  } else {
+    // Use createRequire() as normal for Node.js
+    return createRequire(import.meta.url);
+  }
+}
+
 let fontsRegistered = false;
 const registeredFonts = new Set<string>();
 let lastExplicitBasePath: string | undefined;
@@ -102,7 +120,7 @@ function resolveBaseDirectory(explicitBasePath?: string): string {
 
 function resolveFontsourceVariants(): string[] {
   try {
-    const require = createRequire(import.meta.url);
+    const require = getSafeRequire();
     const resolvedPaths = new Set<string>();
 
     for (const variant of FONT_VARIANTS) {
@@ -139,7 +157,7 @@ function resolveFontsourceVariants(): string[] {
 
 function resolveTypefaceFont(): string[] {
   try {
-    const require = createRequire(import.meta.url);
+    const require = getSafeRequire();
     const moduleFontPath = require.resolve('typeface-noto-sans/files/noto-sans-latin-400.woff');
 
     if (existsSync(moduleFontPath)) {
@@ -226,7 +244,7 @@ function resolveBundledFontPathViaModuleResolution(filename: string): string[] {
   if (!requireForResolution) {
     try {
       if (typeof import.meta !== 'undefined' && typeof import.meta.url === 'string') {
-        requireForResolution = createRequire(import.meta.url);
+        requireForResolution = getSafeRequire();
       }
     } catch {
       requireForResolution = null;

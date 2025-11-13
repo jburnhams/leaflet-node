@@ -17,6 +17,24 @@ import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
 
+/**
+ * Get a require function that works in both Node.js and jsdom environments
+ * In jsdom, import.meta.url is set to an HTTP URL which causes createRequire to fail
+ */
+function getSafeRequire(): NodeJS.Require {
+  const isJsdom = import.meta.url?.startsWith('http://') ||
+                  import.meta.url?.startsWith('https://');
+
+  if (isJsdom) {
+    // In jsdom environment, use eval('require') to get the require function
+    // eslint-disable-next-line no-eval
+    return eval('require') as NodeJS.Require;
+  } else {
+    // Use createRequire() as normal for Node.js
+    return createRequire(import.meta.url);
+  }
+}
+
 // Extend global namespace for headless environment
 declare global {
   // eslint-disable-next-line no-var
@@ -67,8 +85,8 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
     };
   } else {
     // Create new fake DOM environment using jsdom
-    // Use createRequire to support both CommonJS and ESM environments
-    const requireFn = createRequire(import.meta.url);
+    // Use getSafeRequire to support both CommonJS and ESM environments
+    const requireFn = getSafeRequire();
     const { JSDOM } = requireFn('jsdom');
     const jsdomInstance = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
       url: 'http://localhost',
@@ -245,7 +263,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   });
 
   // Load Leaflet
-  const requireFn = createRequire(import.meta.url);
+  const requireFn = getSafeRequire();
   const leafletPath = requireFn.resolve('leaflet');
   const L = requireFn(leafletPath) as typeof LeafletModule;
   (global as any).L = L;

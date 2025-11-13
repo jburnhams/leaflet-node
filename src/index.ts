@@ -167,69 +167,114 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   const OriginalHTMLCanvasElement = dom.window.HTMLCanvasElement;
   const proto = OriginalHTMLCanvasElement.prototype as any;
 
+  // Helper function to patch a canvas element with @napi-rs/canvas backing
+  function patchCanvasElement(element: any): void {
+    // Skip if already patched
+    if ((element as any)._napiCanvas) {
+      return;
+    }
+
+    const width = (element as any).width || 300;
+    const height = (element as any).height || 150;
+    let napiCanvas;
+    try {
+      napiCanvas = createCanvas(width, height);
+    } catch (error) {
+      const hint = new Error(
+        'leaflet-node: Canvas initialization failed. Ensure @napi-rs/canvas is installed correctly. ' +
+        'If you are running tests with Jest, use @jest-environment node or import leaflet-node before jsdom is created.'
+      );
+      (hint as any).cause = error;
+      console.error('leaflet-node: Canvas initialization failed', error);
+      throw hint;
+    }
+
+    const probeContext = napiCanvas.getContext('2d');
+    if (!probeContext) {
+      const message = [
+        'leaflet-node: Canvas context could not be created.',
+        'If you are running under a test runner, ensure @jest-environment node is used or import leaflet-node before jsdom initializes.',
+      ].join(' ');
+      console.error(message);
+      throw new Error(message);
+    }
+
+    // Cache the 2D context to ensure the same object is returned on subsequent calls
+    let cached2dContext: any = null;
+
+    // Copy canvas methods to the DOM element
+    (element as any).getContext = function(contextType: string, options?: any) {
+      if (contextType === '2d') {
+        if (!cached2dContext) {
+          cached2dContext = napiCanvas.getContext('2d', options);
+        }
+        return cached2dContext;
+      }
+      return null;
+    };
+
+    (element as any).toDataURL = function(type?: string, quality?: any) {
+      return (napiCanvas as any).toDataURL(type, quality);
+    };
+
+    (element as any).toBuffer = function(mimeType?: string, quality?: any) {
+      return (napiCanvas as any).toBuffer(mimeType, quality);
+    };
+
+    // Link width and height properties
+    Object.defineProperty(element, 'width', {
+      get() { return napiCanvas.width; },
+      set(value) {
+        napiCanvas.width = value;
+        // Reset cached context when dimensions change
+        cached2dContext = null;
+      },
+      configurable: true,
+      enumerable: true
+    });
+
+    Object.defineProperty(element, 'height', {
+      get() { return napiCanvas.height; },
+      set(value) {
+        napiCanvas.height = value;
+        // Reset cached context when dimensions change
+        cached2dContext = null;
+      },
+      configurable: true,
+      enumerable: true
+    });
+
+    // Store reference to napi canvas
+    (element as any)._napiCanvas = napiCanvas;
+  }
+
   // Override createElement to use @napi-rs/canvas for canvas elements
   const originalCreateElement = dom.window.document.createElement.bind(dom.window.document);
   dom.window.document.createElement = function(tagName: string, options?: any) {
     const element = originalCreateElement(tagName, options);
 
     if (tagName.toLowerCase() === 'canvas') {
-      const width = (element as any).width || 300;
-      const height = (element as any).height || 150;
-      let napiCanvas;
-      try {
-        napiCanvas = createCanvas(width, height);
-      } catch (error) {
-        const hint = new Error(
-          'leaflet-node: Canvas initialization failed. Ensure @napi-rs/canvas is installed correctly. ' +
-          'If you are running tests with Jest, use @jest-environment node or import leaflet-node before jsdom is created.'
-        );
-        (hint as any).cause = error;
-        console.error('leaflet-node: Canvas initialization failed', error);
-        throw hint;
-      }
-
-      const probeContext = napiCanvas.getContext('2d');
-      if (!probeContext) {
-        const message = [
-          'leaflet-node: Canvas context could not be created.',
-          'If you are running under a test runner, ensure @jest-environment node is used or import leaflet-node before jsdom initializes.',
-        ].join(' ');
-        console.error(message);
-        throw new Error(message);
-      }
-
-      // Copy canvas methods to the DOM element
-      (element as any).getContext = function(contextType: string, options?: any) {
-        if (contextType === '2d') {
-          return napiCanvas.getContext('2d', options);
-        }
-        return null;
-      };
-
-      (element as any).toDataURL = function(type?: string, quality?: any) {
-        return (napiCanvas as any).toDataURL(type, quality);
-      };
-
-      (element as any).toBuffer = function(mimeType?: string, quality?: any) {
-        return (napiCanvas as any).toBuffer(mimeType, quality);
-      };
-
-      // Link width and height properties
-      Object.defineProperty(element, 'width', {
-        get() { return napiCanvas.width; },
-        set(value) { napiCanvas.width = value; }
-      });
-
-      Object.defineProperty(element, 'height', {
-        get() { return napiCanvas.height; },
-        set(value) { napiCanvas.height = value; }
-      });
-
-      // Store reference to napi canvas
-      (element as any)._napiCanvas = napiCanvas;
+      patchCanvasElement(element);
     }
 
     return element;
+  };
+
+  // Also patch the HTMLCanvasElement prototype's getContext method
+  // This ensures ALL canvas elements get patched, even those created
+  // through other means (e.g., cloneNode, innerHTML, etc.)
+  const originalGetContext = proto.getContext;
+  proto.getContext = function(this: any, contextType: string, options?: any) {
+    // Ensure this canvas element is patched
+    patchCanvasElement(this);
+
+    // Now call the patched getContext method
+    if (this._napiCanvas) {
+      return this.getContext(contextType, options);
+    }
+
+    // Fallback to original if patching somehow failed
+    return originalGetContext.call(this, contextType, options);
   };
 
   // Navigator is already available through window

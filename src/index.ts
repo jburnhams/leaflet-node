@@ -269,12 +269,46 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   (global as any).L = L;
 
   // Set icon path for markers
-  // Note: L.Icon.Default may not be initialized yet in some environments (e.g., Jest/jsdom)
-  // In those cases, we can skip setting the image path as it will be set when the first icon is created
+  // Compute the leaflet directory path
+  const scriptName = leafletPath.split(path.sep).pop() || '';
+  const leafletDir = leafletPath.substring(0, leafletPath.length - scriptName.length);
+  const iconImagePath = `file://${leafletDir}images${path.sep}`;
+
+  // L.Icon.Default may not be initialized yet in some environments (e.g., Jest/jsdom)
   if (L.Icon && L.Icon.Default) {
-    const scriptName = leafletPath.split(path.sep).pop() || '';
-    const leafletDir = leafletPath.substring(0, leafletPath.length - scriptName.length);
-    L.Icon.Default.imagePath = `file://${leafletDir}images${path.sep}`;
+    // Default exists, set the path immediately
+    L.Icon.Default.imagePath = iconImagePath;
+  } else if (L.Icon) {
+    // Default doesn't exist yet - intercept when it's created and set the path then
+    const iconProto = L.Icon as any;
+    const originalDefaultDescriptor = Object.getOwnPropertyDescriptor(iconProto, 'Default');
+
+    let cachedDefault: any;
+    Object.defineProperty(iconProto, 'Default', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        if (originalDefaultDescriptor?.get) {
+          cachedDefault = originalDefaultDescriptor.get.call(this);
+        } else if (cachedDefault) {
+          return cachedDefault;
+        }
+        return cachedDefault;
+      },
+      set(value: any) {
+        cachedDefault = value;
+        // When Default is set, immediately apply the imagePath
+        // L.Icon.Default is a class/constructor, so imagePath is a property on the constructor itself
+        if (value && typeof value === 'function' && !value.imagePath) {
+          value.imagePath = iconImagePath;
+        } else if (value && typeof value === 'object' && !value.imagePath) {
+          value.imagePath = iconImagePath;
+        }
+        if (originalDefaultDescriptor?.set) {
+          originalDefaultDescriptor.set.call(this, value);
+        }
+      }
+    });
   }
 
   // Monkey-patch L.Map.prototype

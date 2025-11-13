@@ -15,6 +15,13 @@ export default defineConfig({
   external: ['leaflet', 'canvas', 'jsdom'],
   shims: true,
   target: 'node18',
+  silent: true, // Suppress post-build warnings about eval
+  esbuildOptions(options) {
+    // Suppress eval warnings - we use eval intentionally for Jest/jsdom compatibility
+    // See src/utils.ts:getSafeRequire() for details on why eval is necessary
+    options.logOverride = options.logOverride || {};
+    options.logOverride['direct-eval'] = 'silent';
+  },
   async onSuccess() {
     // Post-process CommonJS files to add interop code
     // This makes require('leaflet-node') behave like require('leaflet')

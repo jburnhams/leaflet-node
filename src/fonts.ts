@@ -3,24 +3,7 @@ import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { GlobalFonts } from '@napi-rs/canvas';
-
-/**
- * Get a require function that works in both Node.js and jsdom environments
- * In jsdom, import.meta.url is set to an HTTP URL which causes createRequire to fail
- */
-function getSafeRequire(): NodeJS.Require {
-  const isJsdom = import.meta.url?.startsWith('http://') ||
-                  import.meta.url?.startsWith('https://');
-
-  if (isJsdom) {
-    // In jsdom environment, use eval('require') to get the require function
-    // eslint-disable-next-line no-eval
-    return eval('require') as NodeJS.Require;
-  } else {
-    // Use createRequire() as normal for Node.js
-    return createRequire(import.meta.url);
-  }
-}
+import { getSafeRequire, getImportMetaUrlSafely } from './utils.js';
 
 let fontsRegistered = false;
 const registeredFonts = new Set<string>();
@@ -99,8 +82,9 @@ function resolveBaseDirectory(explicitBasePath?: string): string {
   }
 
   try {
-    if (typeof import.meta !== 'undefined' && typeof import.meta.url === 'string') {
-      const resolvedUrl = new URL(import.meta.url);
+    const importMetaUrl = getImportMetaUrlSafely();
+    if (importMetaUrl) {
+      const resolvedUrl = new URL(importMetaUrl);
       if (resolvedUrl.protocol === 'file:') {
         return path.dirname(fileURLToPath(resolvedUrl));
       }
@@ -243,7 +227,8 @@ function resolveBundledFontPathViaModuleResolution(filename: string): string[] {
 
   if (!requireForResolution) {
     try {
-      if (typeof import.meta !== 'undefined' && typeof import.meta.url === 'string') {
+      const importMetaUrl = getImportMetaUrlSafely();
+      if (importMetaUrl) {
         requireForResolution = getSafeRequire();
       }
     } catch {

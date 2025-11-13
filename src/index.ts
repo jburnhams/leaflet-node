@@ -10,30 +10,12 @@ import './polyfills/apply.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { createCanvas } from '@napi-rs/canvas';
-import { createRequire } from 'module';
 import type * as LeafletModule from 'leaflet';
 import type { LeafletHeadlessMap, HeadlessOptions, ImageExportOptions } from './types.js';
 import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
-
-/**
- * Get a require function that works in both Node.js and jsdom environments
- * In jsdom, import.meta.url is set to an HTTP URL which causes createRequire to fail
- */
-function getSafeRequire(): NodeJS.Require {
-  const isJsdom = import.meta.url?.startsWith('http://') ||
-                  import.meta.url?.startsWith('https://');
-
-  if (isJsdom) {
-    // In jsdom environment, use eval('require') to get the require function
-    // eslint-disable-next-line no-eval
-    return eval('require') as NodeJS.Require;
-  } else {
-    // Use createRequire() as normal for Node.js
-    return createRequire(import.meta.url);
-  }
-}
+import { getSafeRequire } from './utils.js';
 
 // Extend global namespace for headless environment
 declare global {

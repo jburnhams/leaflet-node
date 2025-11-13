@@ -172,4 +172,103 @@ describe('leaflet-node/testing canvas support within jsdom', () => {
       expect(typeof context?.save).toBe('function');
     });
   });
+
+  it('should patch ALL canvas elements including dynamically created ones', async () => {
+    await withJsdomTestingEnvironment(async ({ module, dom }) => {
+      const { Leaflet, createTestMap } = module;
+
+      // TEST 1: Initial canvas should be patched
+      const map = createTestMap({ width: 400, height: 300 });
+      map.setView([51.505, -0.09], 13);
+
+      // Add polyline - this creates the first Canvas renderer
+      const polyline = Leaflet.polyline([
+        [51.5, -0.1],
+        [51.51, -0.09],
+      ], { color: '#ff0000' });
+      polyline.addTo(map);
+
+      const initialCanvases = dom.window.document.querySelectorAll('canvas');
+
+      const ctx1 = initialCanvases[0]?.getContext('2d');
+      expect(ctx1).toBeTruthy();
+      expect(typeof ctx1?.clearRect).toBe('function');
+      expect(typeof ctx1?.save).toBe('function');
+
+      // TEST 2: Simulate what happens during export operations
+      // When Leaflet needs to render at a different size, it may create a new canvas
+
+      // Trigger map resize (simulates what happens during export)
+      map.invalidateSize();
+
+      // Force Leaflet to recreate renderers by changing map size significantly
+      const container = map.getContainer();
+      container.style.width = '800px';
+      container.style.height = '600px';
+      map.invalidateSize();
+
+      // Remove and re-add the polyline (forces new canvas renderer creation)
+      map.removeLayer(polyline);
+      polyline.addTo(map);
+
+      const canvasesAfter = dom.window.document.querySelectorAll('canvas');
+
+      // Check ALL canvas elements have working contexts
+      let allPatched = true;
+      canvasesAfter.forEach((canvas) => {
+        const ctx = canvas.getContext('2d');
+        const hasContext = ctx !== null;
+        const hasClearRect = typeof ctx?.clearRect === 'function';
+        const hasSave = typeof ctx?.save === 'function';
+
+        if (!hasContext || !hasClearRect || !hasSave) {
+          allPatched = false;
+        }
+      });
+
+      expect(allPatched).toBe(true);
+    });
+  });
+
+  it('should patch canvases created via document.createElement after initialization', async () => {
+    await withJsdomTestingEnvironment(async ({ dom }) => {
+      // Create canvas AFTER leaflet-node initialization
+      const canvas1 = dom.window.document.createElement('canvas');
+      canvas1.width = 400;
+      canvas1.height = 300;
+      const ctx1 = canvas1.getContext('2d');
+
+      expect(ctx1).toBeTruthy();
+      expect(typeof ctx1?.clearRect).toBe('function');
+      expect(typeof ctx1?.save).toBe('function');
+
+      // Create another one
+      const canvas2 = dom.window.document.createElement('canvas');
+      const ctx2 = canvas2.getContext('2d');
+
+      expect(ctx2).toBeTruthy();
+      expect(typeof ctx2?.clearRect).toBe('function');
+    });
+  });
+
+  it('should handle toBuffer with polylines without losing canvas context', async () => {
+    await withJsdomTestingEnvironment(async ({ module }) => {
+      const { Leaflet, createTestMap } = module;
+
+      const map = createTestMap({ width: 400, height: 300 });
+      map.setView([51.505, -0.09], 13);
+
+      // Add polyline - this is what triggers the issue
+      Leaflet.polyline([
+        [51.5, -0.1],
+        [51.51, -0.09],
+      ], { color: '#ff0000' }).addTo(map);
+
+      // This should not throw - but currently does in tests
+      const buffer = await (map as any).toBuffer('png');
+
+      expect(Buffer.isBuffer(buffer)).toBe(true);
+      expect(buffer.length).toBeGreaterThan(0);
+    });
+  });
 });

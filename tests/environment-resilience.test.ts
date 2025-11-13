@@ -203,4 +203,43 @@ describe('environment resilience', () => {
     // The actual fix is tested in the Jest fixture which runs in a real jsdom environment
     // where import.meta.url is naturally set to an HTTP URL
   });
+
+  it('should handle jsdom with document.baseURI set to "about:blank"', async () => {
+    // This test reproduces the bug where the bundler's import.meta.url polyfill
+    // crashes when document.baseURI is 'about:blank' (the default for jsdom without a URL).
+    //
+    // The bundler (tsup/esbuild) creates a polyfill like:
+    // var getImportMetaUrl = () => typeof document === "undefined"
+    //   ? new URL(`file:${__filename}`).href
+    //   : document.currentScript?.src || new URL("main.js", document.baseURI).href;
+    //
+    // When document.baseURI is 'about:blank', the polyfill crashes with:
+    // TypeError: Invalid URL - new URL("main.js", "about:blank")
+    //
+    // The fix uses eval('import.meta.url') and checks for document existence early
+    // to avoid triggering the problematic polyfill.
+
+    // Set up a document with baseURI = 'about:blank' (default jsdom without URL)
+    (globalThis as Record<string, unknown>).document = {
+      baseURI: 'about:blank',
+      currentScript: null,
+    } as unknown as Document;
+
+    // Previously this would crash with "TypeError: Invalid URL"
+    // Now it should work because getSafeRequire detects document and uses eval('require')
+    const { getSafeRequire } = await import('../src/utils.js');
+
+    // Should not throw
+    expect(() => {
+      const requireFn = getSafeRequire();
+      expect(typeof requireFn).toBe('function');
+      expect(typeof requireFn.resolve).toBe('function');
+    }).not.toThrow();
+
+    // Verify that the main module can be loaded with about:blank baseURI
+    // This is the actual bug that was reported
+    const indexModule = await import('../src/index.js');
+    expect(indexModule.default).toBeDefined();
+    expect(indexModule.default.Map).toBeDefined();
+  });
 });

@@ -17,6 +17,7 @@ import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
 import { getSafeRequire } from './utils.js';
 import { ensureCanvasPolyfills } from './polyfills/canvas.js';
+import { patchDomEvent } from './polyfills/dom-event.js';
 
 // Extend global namespace for headless environment
 declare global {
@@ -344,6 +345,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 
   // Monkey-patch L.Map.prototype
   patchMapPrototype(L, opts);
+
+  // Monkey-patch L.DomEvent
+  patchDomEvent(L);
 
   return L;
 }

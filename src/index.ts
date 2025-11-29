@@ -16,6 +16,7 @@ import HeadlessImage, { loadImageSource } from './image.js';
 import { mapToCanvas } from './export-image.js';
 import { ensureDefaultFontsRegistered } from './fonts.js';
 import { getSafeRequire } from './utils.js';
+import { ensureCanvasPolyfills } from './polyfills/canvas.js';
 
 // Extend global namespace for headless environment
 declare global {
@@ -46,6 +47,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   ensureDefaultFontsRegistered(opts.fontAssetBasePath, {
     suppressWarningsUntilConfigured: typeof opts.fontAssetBasePath === 'undefined',
   });
+
+  // Apply Canvas prototype polyfills (for @napi-rs/canvas)
+  ensureCanvasPolyfills();
 
   // Return existing Leaflet instance if already initialized
   if ((global as any).L) {

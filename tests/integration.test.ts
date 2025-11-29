@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import L from '../src/index.js';
-import { ProxyAgent, type Dispatcher } from 'undici';
+import { fetch as undiciFetch, ProxyAgent, type Dispatcher } from 'undici';
 import { analyzePng } from './helpers/png-analysis.js';
 
 /**
@@ -17,6 +17,7 @@ describe('Integration Tests - Undici + Leaflet', () => {
   let map: L.Map;
   let dispatcher: Dispatcher | null = null;
   const canvas = L.canvas ? L.canvas() : undefined;
+  let isNetworkAvailable = false;
 
   function resolveProxyDispatcher(): Dispatcher | null {
     const env = typeof process !== 'undefined' ? process.env ?? {} : {};
@@ -32,7 +33,25 @@ describe('Integration Tests - Undici + Leaflet', () => {
     return proxyUrl ? new ProxyAgent(proxyUrl) : null;
   }
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    // Check network availability
+    try {
+      const tileUrl = 'https://tile.openstreetmap.org/0/0/0.png';
+      dispatcher = resolveProxyDispatcher();
+      const response = await undiciFetch(tileUrl, dispatcher ? { dispatcher } : undefined);
+      if (response.ok) {
+        isNetworkAvailable = true;
+      }
+    } catch (e) {
+      console.warn('Network unavailable, skipping integration tests depending on external tiles.');
+      isNetworkAvailable = false;
+    }
+  });
+
+  beforeEach(function (context) {
+    if (!isNetworkAvailable) {
+      context.skip();
+    }
     dispatcher = resolveProxyDispatcher();
     element = document.createElement('div');
     element.id = 'integration-test-map';

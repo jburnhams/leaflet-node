@@ -11,13 +11,22 @@ export function patchDomEvent(L: typeof LeafletModule): void {
     return;
   }
 
+  // Avoid re-patching if already patched
+  if ((L.DomEvent as any)._leafletNodePatched) {
+    return;
+  }
+
   const originalOff = L.DomEvent.off;
+
+  // Store original on the object to avoid closure issues in some environments (like Jest)
+  // This seems to prevent a silent crash during module import in specific test configurations
+  (L.DomEvent as any)._originalOff = originalOff;
 
   // We use ...args to preserve arguments.length, which Leaflet relies on internally
   // to distinguish between off(obj, type, fn) and off(obj, type)
-  L.DomEvent.off = function(...args: any[]) {
+  L.DomEvent.off = function(this: any, ...args: any[]) {
     try {
-      return originalOff.apply(this, args);
+      return (L.DomEvent as any)._originalOff.apply(this, args);
     } catch (e: any) {
       // Swallow "detachEvent is not a function" errors
       // This happens when Leaflet tries to clean up a Canvas element that lacks event methods
@@ -28,6 +37,9 @@ export function patchDomEvent(L: typeof LeafletModule): void {
       throw e;
     }
   } as typeof originalOff;
+
+  // Mark as patched
+  (L.DomEvent as any)._leafletNodePatched = true;
 
   // Alias removeListener as well if needed
   if ((L.DomEvent as any).removeListener === originalOff) {

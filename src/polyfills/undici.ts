@@ -4,8 +4,10 @@
  * undici expects certain Node.js APIs that may not be available in test environments.
  * This module provides polyfills for:
  * - setImmediate/clearImmediate
- * - setTimeout().unref()/ref()
+ * - setTimeout().unref()/ref()/refresh()
  * - performance.markResourceTiming()
+ * - TextEncoder/TextDecoder (required by undici)
+ * - Blob.prototype.arrayBuffer (required by undici)
  */
 
 let undiciPolyfillsEnsured = false;
@@ -16,6 +18,52 @@ export function ensureUndiciPolyfills(): void {
   }
 
   undiciPolyfillsEnsured = true;
+
+  // Polyfill TextEncoder/TextDecoder
+  if (typeof globalThis.TextEncoder === 'undefined' || typeof globalThis.TextDecoder === 'undefined') {
+    try {
+      // eslint-disable-next-line no-eval
+      const req = typeof require === 'function' ? require : (typeof globalThis.require === 'function' ? globalThis.require : undefined);
+
+      if (req) {
+        const util = req('node:util');
+
+        if (typeof globalThis.TextEncoder === 'undefined' && util.TextEncoder) {
+          globalThis.TextEncoder = util.TextEncoder;
+        }
+
+        if (typeof globalThis.TextDecoder === 'undefined' && util.TextDecoder) {
+          globalThis.TextDecoder = util.TextDecoder as any;
+        }
+      }
+    } catch (e) {
+      // Ignore if util cannot be loaded
+    }
+  }
+
+  // Polyfill Blob.prototype.arrayBuffer
+  if (typeof globalThis.Blob !== 'undefined' && !globalThis.Blob.prototype.arrayBuffer) {
+    globalThis.Blob.prototype.arrayBuffer = function() {
+      // If the Blob has a stream method (Node.js Blobs), use it
+      if ((this as any).stream) {
+        return (async () => {
+          const chunks = [];
+          for await (const chunk of (this as any).stream()) {
+            chunks.push(chunk);
+          }
+          return Buffer.concat(chunks).buffer;
+        })();
+      }
+
+      // Fallback for JSDOM or other environments using FileReader
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(this);
+      });
+    };
+  }
 
   // Polyfill setImmediate and clearImmediate
   if (typeof globalThis.setImmediate === 'undefined') {
@@ -30,7 +78,7 @@ export function ensureUndiciPolyfills(): void {
     };
   }
 
-  // Polyfill setTimeout().unref() and ref() methods
+  // Polyfill setTimeout().unref(), ref(), and refresh() methods
   // These methods are used by undici to prevent timers from keeping the process alive
   const wrappedTimerIds = new Map<any, number>();
   const originalSetTimeout = globalThis.setTimeout;
@@ -46,6 +94,9 @@ export function ensureUndiciPolyfills(): void {
         },
         unref() {
           return this;
+        },
+        refresh() {
+           return this;
         },
         valueOf() {
           return timer;
@@ -69,6 +120,9 @@ export function ensureUndiciPolyfills(): void {
     }
     if (typeof (timer as any).ref !== 'function') {
       (timer as any).ref = function() { return this; };
+    }
+    if (typeof (timer as any).refresh !== 'function') {
+        (timer as any).refresh = function() { return this; };
     }
 
     return timer;

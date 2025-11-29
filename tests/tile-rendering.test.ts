@@ -91,10 +91,10 @@ describe('Tile rendering', () => {
     element.remove();
   });
 
-  it('can download real OpenStreetMap tiles when network is available', async function (this: any) {
+  it('can download real OpenStreetMap tiles when network is available', async (ctx) => {
     if (!remoteTileBuffer) {
       console.warn(remoteTileError?.message ?? 'OpenStreetMap tile download skipped due to unknown error');
-      this.skip?.();
+      ctx.skip();
       return;
     }
 
@@ -124,10 +124,10 @@ describe('Tile rendering', () => {
     expect(analysis.uniqueColorCount).toBeGreaterThan(20);
   }, 30000);
 
-  it('renders remote OpenStreetMap tiles into exported images when reachable', async function (this: any) {
+  it('renders remote OpenStreetMap tiles into exported images when reachable', async (ctx) => {
     if (!remoteTileBuffer) {
       console.warn(remoteTileError?.message ?? 'OpenStreetMap tile rendering skipped due to unknown error');
-      this.skip?.();
+      ctx.skip();
       return;
     }
 

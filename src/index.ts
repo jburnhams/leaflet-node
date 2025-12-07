@@ -375,15 +375,42 @@ function patchMapPrototype(
     };
 
     const mapInstance = originalInit.call(this, id, headlessOpts);
-    (this as any)._headlessSize = { ...options.mapSize };
+    // Initialize headless size with default or user-provided mapSize
+    const initialSize = (opts as any)?.mapSize || options.mapSize;
+    (this as any)._headlessSize = { ...initialSize };
     return mapInstance;
   };
 
   // Override getSize since jsdom doesn't support clientWidth/clientHeight
   L.Map.prototype.getSize = function (this: any): LeafletModule.Point {
     if (!this._size || this._sizeChanged) {
-      const size = (this as any)._headlessSize ?? options.mapSize;
-      this._size = new L.Point(size.width, size.height);
+      let width: number | undefined;
+      let height: number | undefined;
+
+      // Try to get dimensions from the container first
+      // This allows tests to mock dimensions on the container element
+      const container = this.getContainer();
+      if (container) {
+        if (container.clientWidth > 0 && container.clientHeight > 0) {
+          width = container.clientWidth;
+          height = container.clientHeight;
+        } else if (container.getBoundingClientRect) {
+          const rect = container.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            width = rect.width;
+            height = rect.height;
+          }
+        }
+      }
+
+      // Fallback to headless size
+      if (width === undefined || height === undefined) {
+        const size = (this as any)._headlessSize ?? options.mapSize;
+        width = size.width;
+        height = size.height;
+      }
+
+      this._size = new L.Point(width as number, height as number);
       this._sizeChanged = false;
     }
     return this._size.clone();

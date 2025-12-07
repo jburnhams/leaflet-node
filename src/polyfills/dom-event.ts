@@ -41,7 +41,8 @@ export function patchDomEvent(L: typeof LeafletModule): void {
 
   // Patch getMousePosition to support JSDOM environments where getBoundingClientRect works
   // but offsetParent/clientLeft/clientTop layout properties might not be perfect
-  L.DomEvent.getMousePosition = function(e: MouseEvent | Touch, container?: HTMLElement): LeafletModule.Point {
+  // Use 'any' for the event type to avoid TypeScript issues if Touch is not defined globally in strict environments
+  L.DomEvent.getMousePosition = function(e: any, container?: HTMLElement): LeafletModule.Point {
     if (container && container.getBoundingClientRect) {
       const rect = container.getBoundingClientRect();
       const clientLeft = container.clientLeft || 0;

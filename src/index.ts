@@ -359,6 +359,13 @@ function patchMapPrototype(
   L: typeof LeafletModule,
   options: ResolvedHeadlessOptions
 ): void {
+  // Patch mouseEventToContainerPoint to ensure it uses the patched DomEvent.getMousePosition
+  // This is necessary because Leaflet might use a local reference to getMousePosition
+  // which bypasses our patch on L.DomEvent.getMousePosition
+  (L.Map.prototype as any).mouseEventToContainerPoint = function(this: any, e: any) {
+    return L.DomEvent.getMousePosition(e, this.getContainer());
+  };
+
   const originalInit = (L.Map.prototype as any).initialize;
 
   // Override initialize to set headless-friendly defaults

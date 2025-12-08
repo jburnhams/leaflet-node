@@ -147,4 +147,48 @@ describe('JSDOM Interaction Support', () => {
       expect(handler).toHaveBeenCalled();
     });
   });
+
+  describe('L.Map Interaction', () => {
+    it('should correctly translate event coordinates to container point', () => {
+      const container = document.createElement('div');
+      container.style.width = '800px';
+      container.style.height = '600px';
+      document.body.appendChild(container);
+
+      // Mock layout metrics
+      Object.defineProperty(container, 'clientWidth', { configurable: true, value: 800 });
+      Object.defineProperty(container, 'clientHeight', { configurable: true, value: 600 });
+      container.getBoundingClientRect = vi.fn(() => ({
+        top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0,
+        toJSON: () => {}
+      }));
+
+      const map = L.map(container).setView([0, 0], 10);
+      const clickSpy = vi.fn();
+
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        clickSpy(e.containerPoint);
+      });
+
+      // Simulate click at (400, 300)
+      const event = new window.MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 400,
+        clientY: 300,
+        button: 0
+      });
+
+      container.dispatchEvent(event);
+
+      expect(clickSpy).toHaveBeenCalled();
+      const point = clickSpy.mock.calls[0][0];
+
+      expect(point.x).toBe(400);
+      expect(point.y).toBe(300);
+
+      map.remove();
+      document.body.removeChild(container);
+    });
+  });
 });

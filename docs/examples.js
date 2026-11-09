@@ -14,7 +14,7 @@ const defaultUsageNotes = [
   },
   {
     label: 'leaflet-node setup',
-    text: 'Install leaflet-node alongside Leaflet (npm|yarn|pnpm|bun add leaflet-node leaflet). Run on Node.js 20+ with the bundled @napi-rs/canvas (glibc ≥ 2.18 on Linux), call the same setup, set map.setSize(width, height), then await map.saveImage(...) to write an image.'
+    text: 'Install leaflet-node alongside Leaflet (npm|yarn|pnpm|bun add leaflet-node leaflet). Run on Node.js 22+ with the bundled @napi-rs/canvas (glibc ≥ 2.18 on Linux), call the same setup, set map.setSize(width, height), then await map.saveImage(...) to write an image.'
   }
 ];
 

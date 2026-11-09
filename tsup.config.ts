@@ -1,7 +1,6 @@
 import { defineConfig } from 'tsup';
-import { readFileSync, writeFileSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { globSync } from 'glob';
 
 export default defineConfig({
   entry: ['src/index.ts', 'src/testing.ts'],
@@ -14,7 +13,7 @@ export default defineConfig({
   treeshake: true,
   external: ['leaflet', 'canvas', 'jsdom'],
   shims: true,
-  target: 'node18',
+  target: 'node22',
   silent: true, // Suppress post-build warnings about eval
   esbuildOptions(options) {
     // Suppress eval warnings - we use eval intentionally for Jest/jsdom compatibility
@@ -25,7 +24,9 @@ export default defineConfig({
   async onSuccess() {
     // Post-process CommonJS files to add interop code
     // This makes require('leaflet-node') behave like require('leaflet')
-    const cjsFiles = globSync('dist/*.js', { ignore: '**/*.map' });
+    const cjsFiles = readdirSync('dist')
+      .filter((name) => name.endsWith('.js'))
+      .map((name) => join('dist', name));
 
     for (const file of cjsFiles) {
       let contents = readFileSync(file, 'utf-8');

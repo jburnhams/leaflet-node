@@ -138,5 +138,7 @@ jobs:
           target_commitish: ${{ steps.bump.outputs.sha }}
           name: Release v${{ steps.version.outputs.version }}
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          # Must be the `token` input: the action ignores a GITHUB_TOKEN env var
+          # and would create the release as github-actions[bot], whose events
+          # don't trigger npm-publish.yml.
+          token: ${{ secrets.RELEASE_TOKEN }}

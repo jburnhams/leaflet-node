@@ -1,8 +1,16 @@
 name: NPM Publish Package
 
 on:
+  # "published" fires whether a release is created directly or finalized from a
+  # draft (softprops/action-gh-release creates a draft, then finalizes it).
   release:
-    types: [created]
+    types: [published]
+  # Manual fallback to publish an existing tag, e.g. if a release run was missed.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish, e.g. v3.0.0"
+        required: true
 
 permissions:
   id-token: write # Required for OIDC
@@ -13,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:

@@ -20,7 +20,7 @@ describe('Integration Tests - Undici + Leaflet', () => {
   let isNetworkAvailable = false;
 
   function resolveProxyDispatcher(): Dispatcher | null {
-    const env = typeof process !== 'undefined' ? process.env ?? {} : {};
+    const env = typeof process !== 'undefined' ? (process.env ?? {}) : {};
     const proxyUrl =
       env.HTTPS_PROXY ||
       env.https_proxy ||
@@ -42,13 +42,13 @@ describe('Integration Tests - Undici + Leaflet', () => {
       if (response.ok) {
         isNetworkAvailable = true;
       }
-    } catch (e) {
+    } catch (_e) {
       console.warn('Network unavailable, skipping integration tests depending on external tiles.');
       isNetworkAvailable = false;
     }
   });
 
-  beforeEach(function (context) {
+  beforeEach((context) => {
     if (!isNetworkAvailable) {
       context.skip();
     }
@@ -63,11 +63,11 @@ describe('Integration Tests - Undici + Leaflet', () => {
     if (map && (map as any)._container) {
       try {
         map.remove();
-      } catch (e) {
+      } catch (_e) {
         // Ignore cleanup errors
       }
     }
-    if (element && element.parentNode) {
+    if (element?.parentNode) {
       element.remove();
     }
   });
@@ -77,13 +77,10 @@ describe('Integration Tests - Undici + Leaflet', () => {
       map.setView([51.505, -0.09], 13);
       (map as any).setSize(800, 600);
 
-      const tileLayer = L.tileLayer(
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-          attribution: 'OpenStreetMap',
-          maxZoom: 19,
-        }
-      ).addTo(map);
+      const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'OpenStreetMap',
+        maxZoom: 19,
+      }).addTo(map);
 
       let hasError = false;
       let errorMessage = '';
@@ -123,20 +120,13 @@ describe('Integration Tests - Undici + Leaflet', () => {
       map.setView([51.505, -0.09], 13);
       (map as any).setSize(600, 400);
 
-      const tileLayer = L.tileLayer(
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-          attribution: 'OpenStreetMap',
-        }
-      ).addTo(map);
+      const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'OpenStreetMap',
+      }).addTo(map);
 
       // Add markers
-      const marker1 = L.marker([51.505, -0.09])
-        .bindPopup('London')
-        .addTo(map);
-      const marker2 = L.marker([51.51, -0.1])
-        .bindPopup('Near London')
-        .addTo(map);
+      const marker1 = L.marker([51.505, -0.09]).bindPopup('London').addTo(map);
+      const marker2 = L.marker([51.51, -0.1]).bindPopup('Near London').addTo(map);
 
       let hasError = false;
       let errorMessage = '';
@@ -175,9 +165,7 @@ describe('Integration Tests - Undici + Leaflet', () => {
       map.setView([48.8566, 2.3522], 12); // Paris
       (map as any).setSize(800, 600);
 
-      const tileLayer = L.tileLayer(
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-      ).addTo(map);
+      const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
       // Add vector overlays
       const circle = L.circle([48.8566, 2.3522], {
@@ -237,9 +225,7 @@ describe('Integration Tests - Undici + Leaflet', () => {
       map.setView([40.7128, -74.006], 11); // New York
       (map as any).setSize(800, 600);
 
-      const tileLayer = L.tileLayer(
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-      ).addTo(map);
+      const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
       // Add GeoJSON layer
       const geojsonFeature = {
@@ -311,9 +297,7 @@ describe('Integration Tests - Undici + Leaflet', () => {
         map.setView(center, zoom);
         (map as any).setSize(600, 400);
 
-        const tileLayer = L.tileLayer(
-          'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-        ).addTo(map);
+        const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         let hasError = false;
         let errorMessage = '';
@@ -355,9 +339,7 @@ describe('Integration Tests - Undici + Leaflet', () => {
       const events: string[] = [];
 
       // Create tile layer but don't add it yet
-      const tileLayer = L.tileLayer(
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-      );
+      const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
 
       // Set up event listeners BEFORE adding to map
       tileLayer.on('loading', () => events.push('loading'));
@@ -366,7 +348,7 @@ describe('Integration Tests - Undici + Leaflet', () => {
       tileLayer.on('load', () => events.push('load'));
 
       let hasError = false;
-      tileLayer.on('tileerror', (e: any) => {
+      tileLayer.on('tileerror', (_e: any) => {
         hasError = true;
         events.push('tileerror');
       });
@@ -413,19 +395,13 @@ describe('Integration Tests - Undici + Leaflet', () => {
       map.setView([34.0522, -118.2437], 10); // Los Angeles
       (map as any).setSize(800, 600);
 
-      const tileLayer1 = L.tileLayer(
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-          opacity: 0.7,
-        }
-      ).addTo(map);
+      const tileLayer1 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        opacity: 0.7,
+      }).addTo(map);
 
-      const tileLayer2 = L.tileLayer(
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-          opacity: 0.3,
-        }
-      ).addTo(map);
+      const tileLayer2 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        opacity: 0.3,
+      }).addTo(map);
 
       let layer1Error = false;
       let layer2Error = false;

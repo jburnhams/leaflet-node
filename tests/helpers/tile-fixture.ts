@@ -1,6 +1,6 @@
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { pathToFileURL } from 'url';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { PNG } from 'pngjs';
 
 const TILE_SIZE = 256;

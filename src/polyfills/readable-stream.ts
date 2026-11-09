@@ -7,4 +7,3 @@ export function ensureReadableStream(): void {
 export function resetReadableStreamPolyfillForTests(): void {
   // No internal state to reset; ensureReadableStream is idempotent.
 }
-

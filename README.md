@@ -1,8 +1,9 @@
 # Leaflet-node
 
 [![npm version](https://img.shields.io/npm/v/leaflet-node.svg)](https://www.npmjs.com/package/leaflet-node)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
+[![CI](https://github.com/jburnhams/leaflet-node/actions/workflows/node.js.yml/badge.svg)](https://github.com/jburnhams/leaflet-node/actions/workflows/node.js.yml)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Leaflet-node brings the full Leaflet map API to Node.js so you can render maps without a browser.<br>
 Reuse the same map setup for server-side image generation, automated tests, and CI pipelines.
@@ -11,7 +12,7 @@ Reuse the same map setup for server-side image generation, automated tests, and 
 
 ### Requirements
 
-- Node.js >= 20
+- Node.js 22.22+, 24.15+ or 26+ (the same range as [jsdom](https://github.com/jsdom/jsdom))
 - Linux users need glibc >= 2.18 for the bundled [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas)
 - Peer dependency: [`leaflet`](https://www.npmjs.com/package/leaflet) ^1.9.0
 
@@ -37,13 +38,36 @@ const map = L.map(container);
 map.setView([51.505538, -0.090005], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors'
+  attribution: '© OpenStreetMap contributors',
 }).addTo(map);
 
 map.setSize(600, 400);
 await new Promise((resolve) => setTimeout(resolve, 1000));
 await map.saveImage('map.png');
 ```
+
+## API
+
+Importing `leaflet-node` sets up a jsdom window, a native canvas and Leaflet itself, then returns the
+normal Leaflet namespace. Everything you know from Leaflet works as usual; leaflet-node adds:
+
+| API                                              | What it does                                                                                                                                                                               |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `map.setSize(width, height)`                     | Sets the map's pixel size (jsdom has no layout engine).                                                                                                                                    |
+| `map.toBuffer(format?, quality?)`                | Renders the current view to a PNG or JPEG `Buffer`. `quality` (0 to 1) applies to JPEG only.                                                                                               |
+| `map.saveImage(filename, { format?, quality? })` | Renders the view and writes it to disk. Resolves with the filename.                                                                                                                        |
+| `initializeEnvironment(options)`                 | Changes the defaults for maps created afterwards: `mapSize` (default 1024×1024), `enableAnimations` (default `false`), `userAgent` (the jsdom `navigator.userAgent`), `fontAssetBasePath`. |
+| `setFontAssetBasePath(path)`                     | Points the fallback font loader at a custom font file or directory.                                                                                                                        |
+
+```ts
+import L, { initializeEnvironment } from 'leaflet-node';
+
+initializeEnvironment({ mapSize: { width: 512, height: 512 } });
+const map = L.map(document.createElement('div')); // 512×512 unless you call setSize
+```
+
+`leaflet-node/testing` adds `createTestMap`, `cleanupTestMaps`, `waitForTiles` and `waitForMapReady`
+(see [Tile loading helpers](#tile-loading-helpers)).
 
 ## Testing with Jest
 
@@ -95,16 +119,14 @@ To suppress these warnings, you can:
 NODE_OPTIONS='--experimental-vm-modules' jest
 ```
 
-2. Or configure Jest to use isolated modules:
+2. Or, with ts-jest, enable isolated modules:
 ```js
 // jest.config.js
 export default {
   testEnvironment: 'node',
-  globals: {
-    'ts-jest': {
-      isolatedModules: true
-    }
-  }
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { isolatedModules: true }],
+  },
 };
 ```
 
@@ -195,22 +217,47 @@ setFontAssetBasePath('/absolute/path/to/NotoSans-Regular.ttf');
 The base path can point directly to a font file or to a directory containing the
 bundled `NotoSans-Regular.ttf` asset.
 
-## Proxy configuration
+## Network requests
 
-Leaflet-node honours standard proxy environment variables:
+Tiles and remote images are fetched with [undici](https://github.com/nodejs/undici). Each request:
+
+- sends `User-Agent: leaflet-node (+https://github.com/jburnhams/leaflet-node)`. Public tile servers
+  such as OpenStreetMap's require an identifying User-Agent; check your provider's
+  [usage policy](https://operations.osmfoundation.org/policies/tiles/) before rendering at volume.
+- times out after 30 seconds, which fires the image's `error` event (and Leaflet's `tileerror`).
+
+### Proxy configuration
+
+Leaflet-node honours the standard proxy environment variables:
 
 ```bash
-export HTTPS_PROXY=http://proxy.example.com:8080
-export HTTP_PROXY=http://proxy.example.com:8080
+export HTTP_PROXY=http://proxy.example.com:8080   # http:// URLs
+export HTTPS_PROXY=http://proxy.example.com:8080  # https:// URLs (falls back to HTTP_PROXY)
+export ALL_PROXY=http://proxy.example.com:8080    # used when neither of the above is set
+export NO_PROXY=localhost,.internal.example.com   # hosts that bypass the proxy
 ```
 
-Set them before running exports to route tile downloads through your proxy.
+Lower-case names work too. Changes are picked up on the next request.
 
 ## Performance tips
 
 - **Reuse map instances** – keep a single map around and update the view instead of creating a new `L.map()` for every render.
 - **Batch exports** – kick off multiple independent exports with `Promise.all()` when your server has headroom.
 - **Manage memory** – always call `map.remove()` and drop references once you are done with a map so Node.js can reclaim resources.
+
+## Development
+
+```bash
+npm ci
+npm run lint          # Biome lint + format check, then oxlint's type-aware rules
+npm run format        # Biome: apply formatting
+npm run typecheck     # TypeScript 7
+npm run test:coverage # builds with tsdown, then runs Vitest with coverage
+npm run test:docs     # builds the docs site and checks the rendered examples
+```
+
+`tests/jest-fixture` runs the built package under `jest-environment-jsdom` to make sure it keeps
+working inside consumers' Jest suites.
 
 ---
 

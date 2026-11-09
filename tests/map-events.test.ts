@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from 'vitest';
 import L from '../src/index.js';
-import { ensureTileFixture, getTileFixtureUrl } from './helpers/tile-fixture.js';
+import { ensureTileFixture } from './helpers/tile-fixture.js';
 
 /**
  * Map Events Tests
@@ -30,11 +30,11 @@ describe('Map Events', () => {
     if (map && (map as any)._container) {
       try {
         map.remove();
-      } catch (e) {
+      } catch (_e) {
         // Ignore cleanup errors
       }
     }
-    if (element && element.parentNode) {
+    if (element?.parentNode) {
       element.remove();
     }
   });
@@ -47,7 +47,7 @@ describe('Map Events', () => {
       map.setView(latlng, 10);
 
       // Wait for event to fire
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(loadSpy).toHaveBeenCalled();
     });
@@ -59,7 +59,7 @@ describe('Map Events', () => {
 
       map.setView([lat + 1, lng + 1], 12);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(viewresetSpy).toHaveBeenCalled();
     });
@@ -75,7 +75,7 @@ describe('Map Events', () => {
       (map as any).setSize(800, 600);
       map.invalidateSize();
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Note: resize event may not fire in headless mode without DOM changes
       // If the event fired, verify its structure

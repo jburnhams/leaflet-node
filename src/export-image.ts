@@ -5,7 +5,7 @@
  * without relying on the unmaintained leaflet-image package.
  */
 
-import { createCanvas, Canvas } from '@napi-rs/canvas';
+import { createCanvas, type Canvas } from '@napi-rs/canvas';
 import type { SKRSContext2D } from '@napi-rs/canvas';
 import { loadImageSource } from './image.js';
 
@@ -33,11 +33,12 @@ function parseTransform(transform?: string | null): { x: number; y: number; hasV
   let hasValue = false;
 
   const regex = /(matrix3d|matrix|translate3d|translate|translateX|translateY)\(([^)]*)\)/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(transform))) {
+  for (const match of transform.matchAll(regex)) {
     const type = match[1];
-    const rawArgs = match[2].split(',').map((arg) => arg.trim()).filter((arg) => arg.length > 0);
+    const rawArgs = match[2]
+      .split(',')
+      .map((arg) => arg.trim())
+      .filter((arg) => arg.length > 0);
 
     if (type === 'matrix' && rawArgs.length >= 6) {
       const x = parseFloat(rawArgs[4]);
@@ -200,9 +201,9 @@ export async function mapToCanvas(map: any): Promise<Canvas> {
   }
 
   // Find all drawable elements in the map (tile images, vector canvases, etc.)
-  const drawableElements = Array.from(
-    container.querySelectorAll('canvas, img')
-  ) as Array<HTMLCanvasElement | HTMLImageElement>;
+  const drawableElements = Array.from(container.querySelectorAll('canvas, img')) as Array<
+    HTMLCanvasElement | HTMLImageElement
+  >;
 
   // If no drawable elements found, add a temporary vector layer to force canvas creation
   let tempCircle: any = null;
@@ -213,7 +214,7 @@ export async function mapToCanvas(map: any): Promise<Canvas> {
     tempCircle = L.circle(center, {
       radius: 1,
       opacity: 0,
-      fillOpacity: 0
+      fillOpacity: 0,
     }).addTo(map);
 
     // Re-query for drawable elements
@@ -257,7 +258,7 @@ export async function mapToCanvas(map: any): Promise<Canvas> {
 
       try {
         const existing = (imgElement as any)._napiImage;
-        const image = existing || await loadImageSource(src);
+        const image = existing || (await loadImageSource(src));
 
         if (!existing) {
           (imgElement as any)._napiImage = image;
@@ -265,16 +266,16 @@ export async function mapToCanvas(map: any): Promise<Canvas> {
 
         const cssWidth = parseCssPx(imgElement.style?.width);
         const cssHeight = parseCssPx(imgElement.style?.height);
-        const width = cssWidth ?? (
-          imgElement.width ||
-          parseInt(imgElement.getAttribute('width') || '0', 10) ||
-          image.width
-        );
-        const height = cssHeight ?? (
-          imgElement.height ||
-          parseInt(imgElement.getAttribute('height') || '0', 10) ||
-          image.height
-        );
+        const width =
+          cssWidth ??
+          (imgElement.width ||
+            parseInt(imgElement.getAttribute('width') || '0', 10) ||
+            image.width);
+        const height =
+          cssHeight ??
+          (imgElement.height ||
+            parseInt(imgElement.getAttribute('height') || '0', 10) ||
+            image.height);
 
         ctx.drawImage(image as any, x, y, width, height);
       } catch (error) {
@@ -288,7 +289,7 @@ export async function mapToCanvas(map: any): Promise<Canvas> {
     tempCircle.remove();
   }
 
-  await drawPopupOverlays(map, ctx, size);
+  drawPopupOverlays(map, ctx, size);
 
   return canvas;
 }
@@ -320,12 +321,7 @@ function collectPopupLayers(map: any): any[] {
 
   const layers = map?._layers ?? {};
   for (const layer of Object.values(layers)) {
-    if (
-      PopupClass
-      && layer instanceof PopupClass
-      && map.hasLayer?.(layer)
-      && !seen.has(layer)
-    ) {
+    if (PopupClass && layer instanceof PopupClass && map.hasLayer?.(layer) && !seen.has(layer)) {
       popups.push(layer);
       seen.add(layer);
     }
@@ -384,9 +380,8 @@ function measurePopupLayout(
   const optionOffset = popup.options?.offset ? L.point(popup.options.offset) : L.point(0, 0);
   const anchorPosition = containerPoint.add(anchorPoint).add(optionOffset);
 
-  const contentNode: HTMLElement | null = popup._contentNode
-    ?? popup._container?.querySelector?.('.leaflet-popup-content')
-    ?? null;
+  const contentNode: HTMLElement | null =
+    popup._contentNode ?? popup._container?.querySelector?.('.leaflet-popup-content') ?? null;
   const contentLines = normalisePopupText(contentNode);
 
   const baseFontSize = 13;
@@ -454,11 +449,7 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
-async function drawPopupOverlays(
-  map: any,
-  ctx: RenderingContext,
-  size?: { x: number; y: number }
-): Promise<void> {
+function drawPopupOverlays(map: any, ctx: RenderingContext, size?: { x: number; y: number }): void {
   const popupLayers = collectPopupLayers(map);
   if (popupLayers.length === 0) {
     return;
@@ -486,7 +477,6 @@ async function drawPopupOverlays(
 
     const wrapperBottom = top + height;
     const tipCenterX = anchor.x;
-    const tipCenterY = anchor.y - tipHalfDiagonal;
     const tipBaseY = wrapperBottom - wrapperPadding;
     const tipLeftBaseX = tipCenterX - tipHalfDiagonal;
     const tipRightBaseX = tipCenterX + tipHalfDiagonal;

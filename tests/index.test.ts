@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as path from 'path';
-import { promises as fs } from 'fs';
+import * as path from 'node:path';
+import { promises as fs } from 'node:fs';
 import L from '../src/index.js';
 import { analyzePng } from './helpers/png-analysis.js';
 import { ensureTileFixture, getTileFixtureUrl } from './helpers/tile-fixture.js';
@@ -192,13 +192,11 @@ describe('Leaflet-node', () => {
 
       const center = map.getCenter();
       // Center should have moved away from original latlng
-      const distance =
-        Math.abs(center.lat - lat) + Math.abs(center.lng - lng);
+      const distance = Math.abs(center.lat - lat) + Math.abs(center.lng - lng);
       expect(distance).toBeGreaterThan(10);
       expect(map.getZoom()).toBe(3);
     });
   });
-
 });
 const localTileUrl = getTileFixtureUrl();
 process.env.LEAFLET_NODE_TILE_URL = localTileUrl;

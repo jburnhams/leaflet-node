@@ -32,11 +32,11 @@ describe('Layer Events', () => {
     if (map && (map as any)._container) {
       try {
         map.remove();
-      } catch (e) {
+      } catch (_e) {
         // Ignore cleanup errors
       }
     }
-    if (element && element.parentNode) {
+    if (element?.parentNode) {
       element.remove();
     }
   });
@@ -49,7 +49,7 @@ describe('Layer Events', () => {
       const marker = L.marker(latlng);
       map.addLayer(marker);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(layeraddSpy).toHaveBeenCalled();
       const event = layeraddSpy.mock.calls[0][0];
@@ -64,7 +64,7 @@ describe('Layer Events', () => {
       const tileLayer = L.tileLayer(getTileFixtureUrl());
       map.addLayer(tileLayer);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(layeraddSpy).toHaveBeenCalled();
       const event = layeraddSpy.mock.calls[0][0];
@@ -85,7 +85,7 @@ describe('Layer Events', () => {
       );
       map.addLayer(polyline);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(layeraddSpy).toHaveBeenCalled();
     });
@@ -96,14 +96,14 @@ describe('Layer Events', () => {
       const marker = L.marker(latlng);
       map.addLayer(marker);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const layerremoveSpy = vi.fn();
       map.on('layerremove', layerremoveSpy);
 
       map.removeLayer(marker);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(layerremoveSpy).toHaveBeenCalled();
       const event = layerremoveSpy.mock.calls[0][0];
@@ -123,7 +123,7 @@ describe('Layer Events', () => {
 
       marker.openPopup();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(popupopenSpy).toHaveBeenCalled();
     });
@@ -136,12 +136,12 @@ describe('Layer Events', () => {
       map.addLayer(marker);
       marker.openPopup();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       marker.on('popupclose', popupcloseSpy);
       marker.closePopup();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(popupcloseSpy).toHaveBeenCalled();
     });
@@ -158,7 +158,7 @@ describe('Layer Events', () => {
 
       marker.openTooltip();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(tooltipopenSpy).toHaveBeenCalled();
     });
@@ -171,12 +171,12 @@ describe('Layer Events', () => {
       map.addLayer(marker);
       marker.openTooltip();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       marker.on('tooltipclose', tooltipcloseSpy);
       marker.closeTooltip();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(tooltipcloseSpy).toHaveBeenCalled();
     });

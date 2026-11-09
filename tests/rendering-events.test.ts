@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import L from '../src/index.js';
-import { ensureTileFixture, getTileFixtureUrl } from './helpers/tile-fixture.js';
+import { ensureTileFixture } from './helpers/tile-fixture.js';
 import { analyzePng } from './helpers/png-analysis.js';
 
 /**
@@ -30,11 +30,11 @@ describe('Tile Rendering Events', () => {
     if (map && (map as any)._container) {
       try {
         map.remove();
-      } catch (e) {
+      } catch (_e) {
         // Ignore cleanup errors
       }
     }
-    if (element && element.parentNode) {
+    if (element?.parentNode) {
       element.remove();
     }
   });
@@ -204,7 +204,7 @@ describe('Tile Rendering Events', () => {
         [
           [52.36, 4.88],
           [52.37, 4.92],
-          [52.38, 4.90],
+          [52.38, 4.9],
         ],
         {
           color: 'blue',
@@ -251,8 +251,8 @@ describe('Tile Rendering Events', () => {
         [
           [40.71, -74.01],
           [40.72, -74.01],
-          [40.72, -74.00],
-          [40.71, -74.00],
+          [40.72, -74.0],
+          [40.71, -74.0],
         ],
         {
           color: 'green',
@@ -284,7 +284,7 @@ describe('Tile Rendering Events', () => {
       polygon.setStyle({ color: 'purple', fillOpacity: 0.8 });
 
       // Small delay for style update
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       const buffer = await (map as any).toBuffer('png');
       expect(buffer.length).toBeGreaterThan(1000);
@@ -443,7 +443,7 @@ describe('Tile Rendering Events', () => {
 
       tileLayer.on('tileloadstart', () => {
         const start = Date.now();
-        const originalOnLoad = tileLayer.once;
+        const _originalOnLoad = tileLayer.once;
 
         tileLayer.on('tileload', function handler() {
           const end = Date.now();

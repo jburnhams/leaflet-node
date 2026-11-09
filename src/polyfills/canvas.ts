@@ -8,7 +8,7 @@ import { Canvas, createCanvas } from '@napi-rs/canvas';
  */
 export function ensureCanvasPolyfills(): void {
   // Method 1: Patch the exported class prototype (if it matches)
-  if (Canvas && Canvas.prototype) {
+  if (Canvas?.prototype) {
     patchPrototype(Canvas.prototype);
   }
 
@@ -19,35 +19,35 @@ export function ensureCanvasPolyfills(): void {
     const dummy = createCanvas(1, 1);
     const proto = Object.getPrototypeOf(dummy);
     if (proto && proto !== Canvas?.prototype) {
-       patchPrototype(proto);
+      patchPrototype(proto);
     }
-  } catch (e) {
+  } catch {
     // Ignore errors if createCanvas fails (e.g. missing dependencies)
   }
 }
 
 function patchPrototype(proto: any) {
-    if (typeof proto.addEventListener !== 'function') {
-      proto.addEventListener = function(_type: string, _listener: any, _options?: any) {
-        // No-op
-      };
-    }
+  if (typeof proto.addEventListener !== 'function') {
+    proto.addEventListener = (_type: string, _listener: any, _options?: any) => {
+      // No-op
+    };
+  }
 
-    if (typeof proto.removeEventListener !== 'function') {
-      proto.removeEventListener = function(_type: string, _listener: any, _options?: any) {
-        // No-op
-      };
-    }
+  if (typeof proto.removeEventListener !== 'function') {
+    proto.removeEventListener = (_type: string, _listener: any, _options?: any) => {
+      // No-op
+    };
+  }
 
-    if (typeof proto.attachEvent !== 'function') {
-        proto.attachEvent = function() {
-            // No-op
-        }
-    }
+  if (typeof proto.attachEvent !== 'function') {
+    proto.attachEvent = () => {
+      // No-op
+    };
+  }
 
-    if (typeof proto.detachEvent !== 'function') {
-        proto.detachEvent = function() {
-            // No-op
-        }
-    }
+  if (typeof proto.detachEvent !== 'function') {
+    proto.detachEvent = () => {
+      // No-op
+    };
+  }
 }

@@ -7,7 +7,7 @@ afterEach(() => {
 
 describe('leaflet-node jest/jsdom integration', () => {
   it('wraps numeric timer handles with ref/unref helpers', () => {
-    const timer: any = setTimeout(() => {}, 10);
+    const timer = setTimeout(() => {}, 10);
 
     expect(typeof timer).toBe('object');
     expect(typeof timer.ref).toBe('function');
@@ -21,17 +21,17 @@ describe('leaflet-node jest/jsdom integration', () => {
 
   it('allows wrapped timer handles to be cleared correctly', async () => {
     const spy = jest.fn();
-    const timer: any = setTimeout(spy, 5);
+    const timer = setTimeout(spy, 5);
 
     clearTimeout(timer);
 
-    await new Promise(resolve => setTimeout(resolve, 15));
+    await new Promise((resolve) => setTimeout(resolve, 15));
 
     expect(spy).not.toHaveBeenCalled();
   });
 
   it('provides a performance.markResourceTiming stub', () => {
-    const markResourceTiming = (performance as any).markResourceTiming;
+    const markResourceTiming = performance.markResourceTiming;
 
     expect(typeof markResourceTiming).toBe('function');
 
@@ -49,7 +49,7 @@ describe('leaflet-node jest/jsdom integration', () => {
 
   it('can import and use leaflet-node in jsdom environment', async () => {
     // This test verifies that leaflet-node works when Jest already provides jsdom
-    const leafletNode = await import('../../src/index.js');
+    const leafletNode = await import('../../dist/index.mjs');
     const L = leafletNode.default;
 
     expect(L).toBeDefined();
@@ -77,17 +77,20 @@ describe('leaflet-node jest/jsdom integration', () => {
   it('can use leaflet-node/testing with canvas and toBuffer with polylines', async () => {
     // This test verifies that canvas patching works correctly when using
     // leaflet-node/testing in a Jest/jsdom environment with vector layers
-    const testingModule = await import('../../src/testing.js');
+    const testingModule = await import('../../dist/testing.mjs');
     const { createTestMap, Leaflet: L } = testingModule;
 
     const map = createTestMap({ width: 400, height: 300 });
     map.setView([51.505, -0.09], 13);
 
     // Add polyline - this creates a Canvas renderer
-    L.polyline([
-      [51.5, -0.1],
-      [51.51, -0.09],
-    ], { color: '#ff0000' }).addTo(map);
+    L.polyline(
+      [
+        [51.5, -0.1],
+        [51.51, -0.09],
+      ],
+      { color: '#ff0000' }
+    ).addTo(map);
 
     // Verify canvas elements are properly patched
     const canvases = Array.from(document.querySelectorAll('canvas'));
@@ -101,12 +104,12 @@ describe('leaflet-node jest/jsdom integration', () => {
     }
 
     // Test toBuffer with PNG format
-    const pngBuffer = await (map as any).toBuffer('png');
+    const pngBuffer = await map.toBuffer('png');
     expect(Buffer.isBuffer(pngBuffer)).toBe(true);
     expect(pngBuffer.length).toBeGreaterThan(0);
 
     // Test toBuffer with JPEG format
-    const jpegBuffer = await (map as any).toBuffer('jpeg', 0.8);
+    const jpegBuffer = await map.toBuffer('jpeg', 0.8);
     expect(Buffer.isBuffer(jpegBuffer)).toBe(true);
     expect(jpegBuffer.length).toBeGreaterThan(0);
     // Verify JPEG magic bytes
@@ -116,39 +119,45 @@ describe('leaflet-node jest/jsdom integration', () => {
 
   it('can use saveImage with JPEG format in jsdom', async () => {
     // This test verifies the complete saveImage workflow with vector layers
-    const testingModule = await import('../../src/testing.js');
+    const testingModule = await import('../../dist/testing.mjs');
     const { createTestMap, Leaflet: L } = testingModule;
 
     const map = createTestMap({ width: 400, height: 300 });
     map.setView([51.505, -0.09], 13);
 
     // Add multiple vector layers to stress test canvas handling
-    L.polyline([
-      [51.5, -0.1],
-      [51.51, -0.09],
-    ], { color: '#ff0000', weight: 3 }).addTo(map);
+    L.polyline(
+      [
+        [51.5, -0.1],
+        [51.51, -0.09],
+      ],
+      { color: '#ff0000', weight: 3 }
+    ).addTo(map);
 
     L.circle([51.505, -0.09], {
       color: '#00ff00',
       fillColor: '#00ff00',
       fillOpacity: 0.5,
-      radius: 100
+      radius: 100,
     }).addTo(map);
 
-    L.rectangle([
-      [51.504, -0.091],
-      [51.506, -0.089],
-    ], { color: '#0000ff', weight: 2 }).addTo(map);
+    L.rectangle(
+      [
+        [51.504, -0.091],
+        [51.506, -0.089],
+      ],
+      { color: '#0000ff', weight: 2 }
+    ).addTo(map);
 
     // Test saveImage with JPEG format
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const os = await import('os');
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
+    const os = await import('node:os');
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'leaflet-jest-test-'));
     const jpegPath = path.join(tmpDir, 'test-map.jpg');
 
-    const savedPath = await (map as any).saveImage(jpegPath, { format: 'jpeg', quality: 0.8 });
+    const savedPath = await map.saveImage(jpegPath, { format: 'jpeg', quality: 0.8 });
     expect(savedPath).toBe(jpegPath);
 
     // Verify file exists and has content

@@ -1,7 +1,7 @@
-import { existsSync, statSync } from 'fs';
-import path from 'path';
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
+import { existsSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { GlobalFonts } from '@napi-rs/canvas';
 import { getSafeRequire, getImportMetaUrlSafely } from './utils.js';
 
@@ -39,7 +39,7 @@ const FONT_SOURCE_MODULE = '@fontsource/noto-sans';
 const FONT_BASE_PATH_ENV_KEY = 'LEAFLET_NODE_FONT_BASE_PATH';
 
 let baseDirectoryWarningIssued = false;
-let deferredBaseDirectoryWarning: unknown | null = null;
+let deferredBaseDirectoryWarning: unknown = null;
 
 interface EnsureDefaultFontsOptions {
   suppressWarningsUntilConfigured?: boolean;
@@ -251,7 +251,9 @@ function resolveBundledFontPathViaModuleResolution(filename: string): string[] {
 
   try {
     const packageJsonPath = requireForResolution.resolve('leaflet-node/package.json');
-    resolutionCandidates.add(path.resolve(path.dirname(packageJsonPath), 'assets', 'fonts', filename));
+    resolutionCandidates.add(
+      path.resolve(path.dirname(packageJsonPath), 'assets', 'fonts', filename)
+    );
   } catch {
     // ignore resolution failure; fall back to other strategies
   }
@@ -328,8 +330,7 @@ export function ensureDefaultFontsRegistered(
   if (fontPaths.length === 0) {
     fontsRegistered = false;
 
-    const shouldSuppressWarnings =
-      options.suppressWarningsUntilConfigured && !configuredBasePath;
+    const shouldSuppressWarnings = options.suppressWarningsUntilConfigured && !configuredBasePath;
 
     if (!shouldSuppressWarnings) {
       if (!baseDirectoryWarningIssued && deferredBaseDirectoryWarning !== null) {

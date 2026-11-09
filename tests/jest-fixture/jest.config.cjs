@@ -1,22 +1,10 @@
-const path = require('node:path');
-
+// Runs the built package (dist/) under jest-environment-jsdom, the way a
+// consumer's Jest suite would. Build first: `npm run build`.
 module.exports = {
-  preset: 'ts-jest/presets/default-esm',
   rootDir: __dirname,
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  testMatch: ['<rootDir>/leaflet-node.integration.test.ts'],
-  extensionsToTreatAsEsm: ['.ts'],
-  transform: {
-    '^.+\\.(t|j)sx?$': [
-      'ts-jest',
-      {
-        useESM: true,
-        tsconfig: path.join(__dirname, 'tsconfig.json'),
-      },
-    ],
-  },
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-  },
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.mjs'],
+  testMatch: ['<rootDir>/leaflet-node.integration.test.mjs'],
+  moduleFileExtensions: ['mjs', 'js', 'cjs', 'json'],
+  transform: {},
 };

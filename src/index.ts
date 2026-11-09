@@ -7,9 +7,10 @@
  */
 
 import './polyfills/apply.js';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { createCanvas } from '@napi-rs/canvas';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { type Canvas, createCanvas } from '@napi-rs/canvas';
 import type * as LeafletModule from 'leaflet';
 import type { LeafletHeadlessMap, HeadlessOptions, ImageExportOptions } from './types.js';
 import HeadlessImage, { loadImageSource } from './image.js';
@@ -21,17 +22,15 @@ import { patchDomEvent } from './polyfills/dom-event.js';
 
 // Extend global namespace for headless environment
 declare global {
-  // eslint-disable-next-line no-var
   var L_DISABLE_3D: boolean;
-  // eslint-disable-next-line no-var
   var L_NO_TOUCH: boolean;
 }
 
 /**
  * Default options for headless environment
  */
-type ResolvedHeadlessOptions =
-  Required<Omit<HeadlessOptions, 'fontAssetBasePath'>> & Pick<HeadlessOptions, 'fontAssetBasePath'>;
+type ResolvedHeadlessOptions = Required<Omit<HeadlessOptions, 'fontAssetBasePath'>> &
+  Pick<HeadlessOptions, 'fontAssetBasePath'>;
 
 const DEFAULT_OPTIONS: ResolvedHeadlessOptions = {
   mapSize: { width: 1024, height: 1024 },
@@ -40,10 +39,52 @@ const DEFAULT_OPTIONS: ResolvedHeadlessOptions = {
 };
 
 /**
- * Initialize the headless environment (called automatically)
+ * Options shared by every patched map. initializeEnvironment() mutates this
+ * object in place so that options passed after the automatic initialisation
+ * still apply to maps created afterwards.
+ */
+const activeOptions: ResolvedHeadlessOptions = { ...DEFAULT_OPTIONS };
+
+function applyOptions(options: HeadlessOptions): void {
+  if (options.mapSize) {
+    activeOptions.mapSize = { ...options.mapSize };
+  }
+  if (typeof options.enableAnimations === 'boolean') {
+    activeOptions.enableAnimations = options.enableAnimations;
+  }
+  if (typeof options.userAgent === 'string') {
+    activeOptions.userAgent = options.userAgent;
+  }
+  if (typeof options.fontAssetBasePath === 'string') {
+    activeOptions.fontAssetBasePath = options.fontAssetBasePath;
+  }
+}
+
+function applyUserAgent(navigator: Navigator | undefined): void {
+  if (!navigator) {
+    return;
+  }
+  try {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: activeOptions.userAgent,
+      writable: true,
+      configurable: true,
+    });
+  } catch {
+    // Some environments expose a non-configurable userAgent; leave it as is.
+  }
+}
+
+/**
+ * Initialise the headless environment.
+ *
+ * This runs automatically when leaflet-node is imported. Call it again to
+ * change the defaults (map size, animations, user agent, font path) for maps
+ * created afterwards. Returns the patched Leaflet namespace.
  */
 function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletModule {
-  const opts: ResolvedHeadlessOptions = { ...DEFAULT_OPTIONS, ...options };
+  applyOptions(options);
+  const opts = activeOptions;
 
   ensureDefaultFontsRegistered(opts.fontAssetBasePath, {
     suppressWarningsUntilConfigured: typeof opts.fontAssetBasePath === 'undefined',
@@ -54,6 +95,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 
   // Return existing Leaflet instance if already initialized
   if ((global as any).L) {
+    if (typeof options.userAgent === 'string') {
+      applyUserAgent((global as any).window?.navigator);
+    }
     return (global as any).L;
   }
 
@@ -68,7 +112,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
     // Reuse existing DOM instance from test framework (e.g., Jest with jsdom)
     // Don't try to create a new JSDOM instance to avoid conflicts
     dom = {
-      window: existingWindow
+      window: existingWindow,
     };
   } else {
     // Create new fake DOM environment using jsdom
@@ -123,10 +167,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 
         try {
           // Race between loading the image and the timeout
-          const canvasImage = await Promise.race([
-            loadImageSource(value),
-            timeoutPromise
-          ]);
+          const canvasImage = await Promise.race([loadImageSource(value), timeoutPromise]);
 
           (this as any)._napiImage = canvasImage;
           this.width = canvasImage.width;
@@ -139,7 +180,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
           console.error('Image load failed:', {
             src: value,
             error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined
+            stack: error instanceof Error ? error.stack : undefined,
           });
 
           // Always dispatch error event to prevent silent hangs
@@ -154,9 +195,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
         }
       };
 
-      // Invoke load without additional catch to avoid double error handling
-      load();
-    }
+      // load() handles its own errors by dispatching an 'error' event
+      void load();
+    },
   });
 
   // Set navigator (read-only, needs defineProperty)
@@ -164,7 +205,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
     Object.defineProperty(global, 'navigator', {
       value: dom.window.navigator,
       writable: true,
-      configurable: true
+      configurable: true,
     });
   }
 
@@ -181,15 +222,15 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 
     const width = (element as any).width || 300;
     const height = (element as any).height || 150;
-    let napiCanvas;
+    let napiCanvas: Canvas;
     try {
       napiCanvas = createCanvas(width, height);
     } catch (error) {
       const hint = new Error(
         'leaflet-node: Canvas initialization failed. Ensure @napi-rs/canvas is installed correctly. ' +
-        'If you are running tests with Jest, use @jest-environment node or import leaflet-node before jsdom is created.'
+          'If you are running tests with Jest, use @jest-environment node or import leaflet-node before jsdom is created.',
+        { cause: error }
       );
-      (hint as any).cause = error;
       console.error('leaflet-node: Canvas initialization failed', error);
       throw hint;
     }
@@ -208,7 +249,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
     let cached2dContext: any = null;
 
     // Copy canvas methods to the DOM element
-    (element as any).getContext = function(contextType: string, options?: any) {
+    (element as any).getContext = (contextType: string, options?: any) => {
       if (contextType === '2d') {
         if (!cached2dContext) {
           cached2dContext = napiCanvas.getContext('2d', options);
@@ -218,35 +259,37 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
       return null;
     };
 
-    (element as any).toDataURL = function(type?: string, quality?: any) {
-      return (napiCanvas as any).toDataURL(type, quality);
-    };
+    (element as any).toDataURL = (type?: string, quality?: any) =>
+      (napiCanvas as any).toDataURL(type, quality);
 
-    (element as any).toBuffer = function(mimeType?: string, quality?: any) {
-      return (napiCanvas as any).toBuffer(mimeType, quality);
-    };
+    (element as any).toBuffer = (mimeType?: string, quality?: any) =>
+      (napiCanvas as any).toBuffer(mimeType, quality);
 
     // Link width and height properties
     Object.defineProperty(element, 'width', {
-      get() { return napiCanvas.width; },
+      get() {
+        return napiCanvas.width;
+      },
       set(value) {
         napiCanvas.width = value;
         // Reset cached context when dimensions change
         cached2dContext = null;
       },
       configurable: true,
-      enumerable: true
+      enumerable: true,
     });
 
     Object.defineProperty(element, 'height', {
-      get() { return napiCanvas.height; },
+      get() {
+        return napiCanvas.height;
+      },
       set(value) {
         napiCanvas.height = value;
         // Reset cached context when dimensions change
         cached2dContext = null;
       },
       configurable: true,
-      enumerable: true
+      enumerable: true,
     });
 
     // Store reference to napi canvas
@@ -255,7 +298,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 
   // Override createElement to use @napi-rs/canvas for canvas elements
   const originalCreateElement = dom.window.document.createElement.bind(dom.window.document);
-  dom.window.document.createElement = function(tagName: string, options?: any) {
+  dom.window.document.createElement = (tagName: string, options?: any) => {
     const element = originalCreateElement(tagName, options);
 
     if (tagName.toLowerCase() === 'canvas') {
@@ -269,7 +312,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   // This ensures ALL canvas elements get patched, even those created
   // through other means (e.g., cloneNode, innerHTML, etc.)
   const originalGetContext = proto.getContext;
-  proto.getContext = function(this: any, contextType: string, options?: any) {
+  proto.getContext = function (this: any, contextType: string, options?: any) {
     // Ensure this canvas element is patched
     patchCanvasElement(this);
 
@@ -288,11 +331,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   global.L_DISABLE_3D = true;
   global.L_NO_TOUCH = true;
 
-  // Set user agent
-  Object.defineProperty(dom.window.navigator, 'userAgent', {
-    value: opts.userAgent,
-    writable: true,
-  });
+  applyUserAgent(dom.window.navigator);
 
   // Load Leaflet
   const requireFn = getSafeRequire();
@@ -304,10 +343,10 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   // Compute the leaflet directory path
   const scriptName = leafletPath.split(path.sep).pop() || '';
   const leafletDir = leafletPath.substring(0, leafletPath.length - scriptName.length);
-  const iconImagePath = `file://${leafletDir}images${path.sep}`;
+  const iconImagePath = `${pathToFileURL(path.join(leafletDir, 'images')).href}/`;
 
   // L.Icon.Default may not be initialized yet in some environments (e.g., Jest/jsdom)
-  if (L.Icon && L.Icon.Default) {
+  if (L.Icon?.Default) {
     // Default exists, set the path immediately
     L.Icon.Default.imagePath = iconImagePath;
   } else if (L.Icon) {
@@ -339,7 +378,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
         if (originalDefaultDescriptor?.set) {
           originalDefaultDescriptor.set.call(this, value);
         }
-      }
+      },
     });
   }
 
@@ -355,14 +394,13 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 /**
  * Apply patches to Leaflet Map prototype for headless operation
  */
-function patchMapPrototype(
-  L: typeof LeafletModule,
-  options: ResolvedHeadlessOptions
-): void {
+function patchMapPrototype(L: typeof LeafletModule, options: ResolvedHeadlessOptions): void {
+  // `options` is the shared activeOptions object, so later initializeEnvironment()
+  // calls are picked up here without re-patching.
   // Patch mouseEventToContainerPoint to ensure it uses the patched DomEvent.getMousePosition
   // This is necessary because Leaflet might use a local reference to getMousePosition
   // which bypasses our patch on L.DomEvent.getMousePosition
-  (L.Map.prototype as any).mouseEventToContainerPoint = function(this: any, e: any) {
+  (L.Map.prototype as any).mouseEventToContainerPoint = function (this: any, e: any) {
     return L.DomEvent.getMousePosition(e, this.getContainer());
   };
 
@@ -455,12 +493,15 @@ function patchMapPrototype(
     options: ImageExportOptions = {}
   ): Promise<string> {
     try {
-      const buffer = await (this as LeafletHeadlessMap).toBuffer(options.format ?? 'png', options.quality);
+      const buffer = await (this as LeafletHeadlessMap).toBuffer(
+        options.format ?? 'png',
+        options.quality
+      );
 
       await fs.writeFile(filename, buffer);
       return filename;
     } catch (err) {
-      throw new Error(`Failed to save map image: ${(err as Error).message}`);
+      throw new Error(`Failed to save map image: ${(err as Error).message}`, { cause: err });
     }
   };
 
@@ -486,17 +527,18 @@ function patchMapPrototype(
       }
       return canvas.toBuffer('image/png');
     } catch (err) {
-      throw new Error(`Failed to export map to buffer: ${(err as Error).message}`);
+      throw new Error(`Failed to export map to buffer: ${(err as Error).message}`, { cause: err });
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- re-bound via .call below
   const originalRemove = L.Map.prototype.remove;
   if (typeof originalRemove === 'function') {
     L.Map.prototype.remove = function (this: L.Map) {
       try {
         this.eachLayer?.((layer: any) => {
           const renderer = layer?._renderer;
-          if (renderer && renderer._frame) {
+          if (renderer?._frame) {
             if (typeof L.Util?.cancelAnimFrame === 'function') {
               L.Util.cancelAnimFrame(renderer._frame);
             }

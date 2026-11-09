@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import '../src/polyfills/apply.js';
 import { createCanvas } from '@napi-rs/canvas';
@@ -44,17 +43,17 @@ describe('Leaflet-Node Polyfills', () => {
     // We need to import index.ts to trigger ensureCanvasPolyfills()
 
     it('should have addEventListener on Canvas instance after library load', async () => {
-        await import('../src/index.js');
+      await import('../src/index.js');
 
-        const canvas = createCanvas(100, 100);
+      const canvas = createCanvas(100, 100);
 
-        // The instance should have the methods
-        expect((canvas as any).addEventListener).toBeDefined();
-        expect((canvas as any).removeEventListener).toBeDefined();
+      // The instance should have the methods
+      expect((canvas as any).addEventListener).toBeDefined();
+      expect((canvas as any).removeEventListener).toBeDefined();
 
-        // They should be no-ops
-        expect(() => (canvas as any).addEventListener('click', () => {})).not.toThrow();
-        expect(() => (canvas as any).removeEventListener('click', () => {})).not.toThrow();
+      // They should be no-ops
+      expect(() => (canvas as any).addEventListener('click', () => {})).not.toThrow();
+      expect(() => (canvas as any).removeEventListener('click', () => {})).not.toThrow();
     });
   });
 });

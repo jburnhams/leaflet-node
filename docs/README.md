@@ -23,6 +23,7 @@ npm run build:docs
 ```
 
 This will:
+
 1. Build the leaflet-node library (`npm run build`)
 2. Run the build script (`scripts/build-docs.ts`)
 3. Generate PNG images for each example using leaflet-node
@@ -103,6 +104,7 @@ Example:
 The documentation is automatically deployed to GitHub Pages when changes are pushed to the `main` branch via the `.github/workflows/deploy-docs.yml` workflow.
 
 The workflow:
+
 1. Checks out the repository
 2. Installs Node.js and system dependencies (Cairo, Pango, etc.)
 3. Installs npm packages

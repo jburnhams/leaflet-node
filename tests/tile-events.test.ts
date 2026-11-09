@@ -32,11 +32,11 @@ describe('Tile Events', () => {
     if (map && (map as any)._container) {
       try {
         map.remove();
-      } catch (e) {
+      } catch (_e) {
         // Ignore cleanup errors
       }
     }
-    if (element && element.parentNode) {
+    if (element?.parentNode) {
       element.remove();
     }
   });
@@ -54,7 +54,7 @@ describe('Tile Events', () => {
       tileLayer.on('loading', loadingSpy);
       map.addLayer(tileLayer);
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(loadingSpy).toHaveBeenCalled();
     });
@@ -200,7 +200,7 @@ describe('Tile Events', () => {
 
       map.removeLayer(tileLayer);
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(tileunloadSpy).toHaveBeenCalled();
     });
@@ -233,7 +233,8 @@ describe('Tile Events', () => {
     });
 
     it('works with data URI tiles', async () => {
-      const dataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const dataUri =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       const tileLayer = L.tileLayer(dataUri);
 
       let loadFired = false;

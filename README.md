@@ -249,7 +249,7 @@ Lower-case names work too. Changes are picked up on the next request.
 
 ```bash
 npm ci
-npm run lint          # Biome: lint + format check
+npm run lint          # Biome lint + format check, then oxlint's type-aware rules
 npm run format        # Biome: apply formatting
 npm run typecheck     # TypeScript 7
 npm run test:coverage # builds with tsdown, then runs Vitest with coverage

@@ -4,10 +4,10 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { execSync } from 'child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { execSync } from 'node:child_process';
 import { PNG } from 'pngjs';
 import { analyzePng } from './helpers/png-analysis.js';
 import { ensureTileFixture } from './helpers/tile-fixture.js';
@@ -108,9 +108,7 @@ describe('Documentation Build', () => {
     it('should generate all example images', () => {
       examples.forEach((example) => {
         const imagePath = path.join(imagesDir, `${example.id}.png`);
-        expect(fs.existsSync(imagePath),
-          `Image for ${example.id} should exist`
-        ).toBe(true);
+        expect(fs.existsSync(imagePath), `Image for ${example.id} should exist`).toBe(true);
       });
     });
 
@@ -122,7 +120,7 @@ describe('Documentation Build', () => {
         // Check PNG signature
         expect(buffer[0]).toBe(0x89);
         expect(buffer[1]).toBe(0x50); // 'P'
-        expect(buffer[2]).toBe(0x4E); // 'N'
+        expect(buffer[2]).toBe(0x4e); // 'N'
         expect(buffer[3]).toBe(0x47); // 'G'
       });
     });
@@ -133,7 +131,8 @@ describe('Documentation Build', () => {
         const stats = fs.statSync(imagePath);
 
         // Images should be larger than 1KB (empty/broken images are usually very small)
-        expect(stats.size,
+        expect(
+          stats.size,
           `Image for ${example.id} should be larger than 1KB, got ${stats.size} bytes`
         ).toBeGreaterThan(1024);
       });
@@ -145,11 +144,13 @@ describe('Documentation Build', () => {
         const buffer = fs.readFileSync(imagePath);
         const analysis = analyzePng(buffer);
 
-        expect(analysis.nonTransparentPixels,
+        expect(
+          analysis.nonTransparentPixels,
           `Image for ${example.id} should contain map pixels`
         ).toBeGreaterThan(example.width * example.height * 0.1);
 
-        expect(analysis.uniqueColorCount,
+        expect(
+          analysis.uniqueColorCount,
           `Image for ${example.id} should contain diverse colors`
         ).toBeGreaterThan(50);
       });
@@ -161,13 +162,13 @@ describe('Documentation Build', () => {
         const buffer = fs.readFileSync(imagePath);
         const png = PNG.sync.read(buffer);
 
-        expect(png.width,
-          `Image width for ${example.id} should be ${example.width}`
-        ).toBe(example.width);
+        expect(png.width, `Image width for ${example.id} should be ${example.width}`).toBe(
+          example.width
+        );
 
-        expect(png.height,
-          `Image height for ${example.id} should be ${example.height}`
-        ).toBe(example.height);
+        expect(png.height, `Image height for ${example.id} should be ${example.height}`).toBe(
+          example.height
+        );
       });
     });
 
@@ -194,7 +195,7 @@ describe('Documentation Build', () => {
     });
 
     it('should have unique example IDs', () => {
-      const ids = examples.map(ex => ex.id);
+      const ids = examples.map((ex) => ex.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
     });
@@ -215,18 +216,11 @@ describe('Documentation Build', () => {
 
   describe('Build Artifacts', () => {
     it('should have all required files in dist', () => {
-      const requiredFiles = [
-        'index.html',
-        'style.css',
-        'app.js',
-        'examples.js'
-      ];
+      const requiredFiles = ['index.html', 'style.css', 'app.js', 'examples.js'];
 
       requiredFiles.forEach((file) => {
         const filePath = path.join(distDir, file);
-        expect(fs.existsSync(filePath),
-          `${file} should exist in docs-dist`
-        ).toBe(true);
+        expect(fs.existsSync(filePath), `${file} should exist in docs-dist`).toBe(true);
       });
     });
 

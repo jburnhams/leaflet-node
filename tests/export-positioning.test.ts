@@ -38,7 +38,9 @@ function addImage(parent: HTMLElement, style: Partial<CSSStyleDeclaration>): HTM
 
 async function redPixels(map: ReturnType<typeof fakeMap>): Promise<Array<[number, number]>> {
   const canvas = await mapToCanvas(map);
-  const { data, width, height } = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+  const { data, width, height } = canvas
+    .getContext('2d')
+    .getImageData(0, 0, canvas.width, canvas.height);
   const hits: Array<[number, number]> = [];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -71,7 +73,9 @@ describe('mapToCanvas element positioning', () => {
   });
 
   it('adds margins to the position', async () => {
-    expect(await topLeftOf({ left: '5px', top: '7px', marginLeft: '3px', marginTop: '2px' })).toEqual([8, 9]);
+    expect(
+      await topLeftOf({ left: '5px', top: '7px', marginLeft: '3px', marginTop: '2px' })
+    ).toEqual([8, 9]);
   });
 
   it('reads translate3d transforms', async () => {
@@ -91,14 +95,17 @@ describe('mapToCanvas element positioning', () => {
   });
 
   it('reads matrix3d transforms', async () => {
-    expect(
-      await topLeftOf({ transform: 'matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, 3,4,0,1)' })
-    ).toEqual([3, 4]);
+    expect(await topLeftOf({ transform: 'matrix3d(1,0,0,0, 0,1,0,0, 0,0,1,0, 3,4,0,1)' })).toEqual([
+      3, 4,
+    ]);
   });
 
   it('accumulates transforms from ancestor panes', async () => {
     expect(
-      await topLeftOf({ transform: 'translate3d(2px, 3px, 0px)' }, { transform: 'translate3d(10px, 20px, 0px)' })
+      await topLeftOf(
+        { transform: 'translate3d(2px, 3px, 0px)' },
+        { transform: 'translate3d(10px, 20px, 0px)' }
+      )
     ).toEqual([12, 23]);
   });
 
@@ -135,8 +142,8 @@ describe('mapToCanvas element positioning', () => {
   });
 
   it('throws a clear error when the container is missing', async () => {
-    await expect(mapToCanvas({ getSize: () => ({ x: 1, y: 1 }), getContainer: () => null })).rejects.toThrow(
-      /container element is unavailable/
-    );
+    await expect(
+      mapToCanvas({ getSize: () => ({ x: 1, y: 1 }), getContainer: () => null })
+    ).rejects.toThrow(/container element is unavailable/);
   });
 });

@@ -12,7 +12,9 @@ interface TestContext {
 
 type FrameRequestCallback = (time: number) => void;
 
-async function withJsdomTestingEnvironment(run: (context: TestContext) => Promise<void>): Promise<void> {
+async function withJsdomTestingEnvironment(
+  run: (context: TestContext) => Promise<void>
+): Promise<void> {
   const previousWindow = (globalThis as any).window;
   const previousDocument = (globalThis as any).document;
   const previousImage = (globalThis as any).Image;
@@ -182,10 +184,13 @@ describe('leaflet-node/testing canvas support within jsdom', () => {
       map.setView([51.505, -0.09], 13);
 
       // Add polyline - this creates the first Canvas renderer
-      const polyline = Leaflet.polyline([
-        [51.5, -0.1],
-        [51.51, -0.09],
-      ], { color: '#ff0000' });
+      const polyline = Leaflet.polyline(
+        [
+          [51.5, -0.1],
+          [51.51, -0.09],
+        ],
+        { color: '#ff0000' }
+      );
       polyline.addTo(map);
 
       const initialCanvases = dom.window.document.querySelectorAll('canvas');
@@ -259,10 +264,13 @@ describe('leaflet-node/testing canvas support within jsdom', () => {
       map.setView([51.505, -0.09], 13);
 
       // Add polyline - this is what triggers the issue
-      Leaflet.polyline([
-        [51.5, -0.1],
-        [51.51, -0.09],
-      ], { color: '#ff0000' }).addTo(map);
+      Leaflet.polyline(
+        [
+          [51.5, -0.1],
+          [51.51, -0.09],
+        ],
+        { color: '#ff0000' }
+      ).addTo(map);
 
       // This should not throw - but currently does in tests
       const buffer = await (map as any).toBuffer('png');

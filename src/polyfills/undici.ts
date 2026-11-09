@@ -14,7 +14,10 @@
  */
 
 import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from 'node:util';
-import { MessageChannel as NodeMessageChannel, MessagePort as NodeMessagePort } from 'node:worker_threads';
+import {
+  MessageChannel as NodeMessageChannel,
+  MessagePort as NodeMessagePort,
+} from 'node:worker_threads';
 
 let undiciPolyfillsEnsured = false;
 
@@ -73,8 +76,7 @@ function wrapNumericTimers(): void {
   };
 
   const wrappedClearTimeout = function (this: unknown, id: unknown) {
-    const numericId =
-      id !== null && typeof id === 'object' ? wrappedTimerIds.get(id) : undefined;
+    const numericId = id !== null && typeof id === 'object' ? wrappedTimerIds.get(id) : undefined;
     return originalClearTimeout.call(this, (numericId ?? id) as Parameters<typeof clearTimeout>[0]);
   };
 

@@ -1,4 +1,3 @@
-
 import L from '../src/index';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
@@ -21,7 +20,7 @@ describe('JSDOM Interaction Support', () => {
         height: 100,
         x: 10,
         y: 20,
-        toJSON: () => {}
+        toJSON: () => {},
       }));
 
       // JSDOM defaults clientLeft/Top to 0, which is fine
@@ -32,7 +31,7 @@ describe('JSDOM Interaction Support', () => {
       const event = {
         clientX: 40,
         clientY: 60,
-        type: 'click'
+        type: 'click',
       } as unknown as MouseEvent;
 
       const pos = L.DomEvent.getMousePosition(event, container);
@@ -57,7 +56,7 @@ describe('JSDOM Interaction Support', () => {
         height: 100,
         x: 10,
         y: 10,
-        toJSON: () => {}
+        toJSON: () => {},
       }));
 
       // Event at 20, 20
@@ -65,7 +64,7 @@ describe('JSDOM Interaction Support', () => {
       const event = {
         clientX: 20,
         clientY: 20,
-        type: 'click'
+        type: 'click',
       } as unknown as MouseEvent;
 
       const pos = L.DomEvent.getMousePosition(event, container);
@@ -98,10 +97,15 @@ describe('JSDOM Interaction Support', () => {
       // clientWidth/Height are 0 by default in JSDOM
 
       container.getBoundingClientRect = vi.fn(() => ({
-        left: 0, top: 0, right: 500, bottom: 400,
-        width: 500, height: 400,
-        x: 0, y: 0,
-        toJSON: () => {}
+        left: 0,
+        top: 0,
+        right: 500,
+        bottom: 400,
+        width: 500,
+        height: 400,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
       }));
 
       map.invalidateSize();
@@ -113,7 +117,7 @@ describe('JSDOM Interaction Support', () => {
 
     it('should fall back to headless size if no DOM dimensions available', () => {
       const map = L.map(document.createElement('div'), {
-        mapSize: { width: 200, height: 200 }
+        mapSize: { width: 200, height: 200 },
       });
 
       // No mocks applied
@@ -159,8 +163,15 @@ describe('JSDOM Interaction Support', () => {
       Object.defineProperty(container, 'clientWidth', { configurable: true, value: 800 });
       Object.defineProperty(container, 'clientHeight', { configurable: true, value: 600 });
       container.getBoundingClientRect = vi.fn(() => ({
-        top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0,
-        toJSON: () => {}
+        top: 0,
+        left: 0,
+        right: 800,
+        bottom: 600,
+        width: 800,
+        height: 600,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
       }));
 
       const map = L.map(container).setView([0, 0], 10);
@@ -176,7 +187,7 @@ describe('JSDOM Interaction Support', () => {
         cancelable: true,
         clientX: 400,
         clientY: 300,
-        button: 0
+        button: 0,
       });
 
       container.dispatchEvent(event);

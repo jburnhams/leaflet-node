@@ -2,16 +2,16 @@
 /**
  * Build wrapper that filters out benign warnings
  */
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, '..');
 
-// Run tsup
-const tsup = spawn('npx', ['tsup'], {
+// Run tsdown
+const tsdown = spawn('npx', ['tsdown'], {
   cwd: rootDir,
   stdio: ['inherit', 'pipe', 'pipe'],
   shell: true,
@@ -23,9 +23,9 @@ const filterWarning = (data: Buffer) => {
   // Filter out the "named and default exports together" warning
   const filtered = text
     .split('\n')
-    .filter(line => !line.includes('named and default exports together'))
-    .filter(line => !line.includes('chunk.default'))
-    .filter(line => !line.includes('output.exports'))
+    .filter((line) => !line.includes('named and default exports together'))
+    .filter((line) => !line.includes('chunk.default'))
+    .filter((line) => !line.includes('output.exports'))
     .join('\n');
 
   if (filtered.trim()) {
@@ -34,17 +34,17 @@ const filterWarning = (data: Buffer) => {
   return '';
 };
 
-tsup.stdout.on('data', (data) => {
+tsdown.stdout.on('data', (data) => {
   const output = filterWarning(data);
   if (output) process.stdout.write(output);
 });
 
-tsup.stderr.on('data', (data) => {
+tsdown.stderr.on('data', (data) => {
   const output = filterWarning(data);
   if (output) process.stderr.write(output);
 });
 
-tsup.on('close', (code) => {
+tsdown.on('close', (code) => {
   if (code !== 0) {
     process.exit(code || 1);
   }

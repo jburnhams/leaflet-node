@@ -29,11 +29,11 @@ describe('Network and Proxy Support', () => {
     if (map && (map as any)._container) {
       try {
         map.remove();
-      } catch (e) {
+      } catch (_e) {
         // Ignore cleanup errors
       }
     }
-    if (element && element.parentNode) {
+    if (element?.parentNode) {
       element.remove();
     }
   });
@@ -121,12 +121,12 @@ describe('Network and Proxy Support', () => {
     it('should handle network timeouts', async () => {
       const img = document.createElement('img') as HTMLImageElement;
 
-      let errorOccurred = false;
+      let _errorOccurred = false;
 
       const eventPromise = new Promise<string>((resolve) => {
         img.addEventListener('load', () => resolve('load'));
         img.addEventListener('error', () => {
-          errorOccurred = true;
+          _errorOccurred = true;
           resolve('error');
         });
       });
@@ -153,7 +153,8 @@ describe('Network and Proxy Support', () => {
 
       // Should not throw
       expect(() => {
-        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        img.src =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       }).not.toThrow();
     });
   });

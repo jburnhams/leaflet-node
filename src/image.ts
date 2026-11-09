@@ -4,10 +4,24 @@
  */
 
 import './polyfills/apply.js';
-import { promises as fs } from 'fs';
-import { fileURLToPath } from 'url';
+import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Image as CanvasImage } from '@napi-rs/canvas';
-import { EnvHttpProxyAgent, fetch, type Dispatcher } from 'undici';
+import type { Dispatcher } from 'undici';
+
+type UndiciModule = typeof import('undici');
+let undiciModule: Promise<UndiciModule> | undefined;
+
+/**
+ * undici is loaded on first use rather than with a static import. A bundled
+ * static import is hoisted above the polyfills in this file's chunk, and
+ * undici throws at import time in environments such as jest-environment-jsdom
+ * when TextDecoder or MessagePort are missing.
+ */
+function loadUndici(): Promise<UndiciModule> {
+  undiciModule ??= import('undici');
+  return undiciModule;
+}
 
 /**
  * Identifies leaflet-node to tile servers. Many providers (including the
@@ -18,10 +32,10 @@ export const DEFAULT_USER_AGENT = 'leaflet-node (+https://github.com/jburnhams/l
 /** Requests for a single image are aborted after this many milliseconds. */
 export const IMAGE_REQUEST_TIMEOUT_MS = 30_000;
 
-let cachedDispatcher: { key: string; dispatcher: Dispatcher | null } | undefined;
+let cachedDispatcher: { key: string; dispatcher: Promise<Dispatcher | null> } | undefined;
 
 function readEnv(...names: string[]): string | undefined {
-  const env = typeof process !== 'undefined' ? process.env ?? {} : {};
+  const env = typeof process !== 'undefined' ? (process.env ?? {}) : {};
   for (const name of names) {
     const value = env[name];
     if (value) {
@@ -41,7 +55,7 @@ function readEnv(...names: string[]): string | undefined {
  * The dispatcher is cached per configuration, so changing the variables at
  * runtime takes effect on the next request.
  */
-export function resolveProxyDispatcher(): Dispatcher | null {
+export function resolveProxyDispatcher(): Promise<Dispatcher | null> {
   const allProxy = readEnv('ALL_PROXY', 'all_proxy');
   const httpProxy = readEnv('HTTP_PROXY', 'http_proxy') ?? allProxy;
   const httpsProxy = readEnv('HTTPS_PROXY', 'https_proxy') ?? httpProxy;
@@ -52,12 +66,18 @@ export function resolveProxyDispatcher(): Dispatcher | null {
     return cachedDispatcher.dispatcher;
   }
 
+  // Cache the promise synchronously so concurrent first requests share one agent
   const dispatcher =
-    httpProxy || httpsProxy ? new EnvHttpProxyAgent({ httpProxy, httpsProxy, noProxy }) : null;
+    httpProxy || httpsProxy
+      ? loadUndici().then(
+          ({ EnvHttpProxyAgent }) => new EnvHttpProxyAgent({ httpProxy, httpsProxy, noProxy })
+        )
+      : Promise.resolve(null);
 
   const previous = cachedDispatcher?.dispatcher;
   cachedDispatcher = { key, dispatcher };
-  void previous?.close().catch(() => {});
+  // Graceful close: requests already using the old agent are allowed to finish
+  void previous?.then((agent) => agent?.close()).catch(() => {});
 
   return dispatcher;
 }
@@ -88,7 +108,7 @@ async function fileExists(path: string): Promise<boolean> {
  * Load image from HTTP/HTTPS URL
  */
 async function loadFromUrl(url: string): Promise<Buffer> {
-  const dispatcher = resolveProxyDispatcher();
+  const [{ fetch }, dispatcher] = await Promise.all([loadUndici(), resolveProxyDispatcher()]);
   const response = await fetch(url, {
     headers: { 'User-Agent': DEFAULT_USER_AGENT },
     signal: AbortSignal.timeout(IMAGE_REQUEST_TIMEOUT_MS),
@@ -163,7 +183,9 @@ async function bufferToImage(buffer: Buffer): Promise<CanvasImage> {
     const image = new CanvasImage();
     image.onload = () => resolve(image);
     image.onerror = (error: unknown) =>
-      reject(error instanceof Error ? error : new Error(`Failed to decode image: ${String(error)}`));
+      reject(
+        error instanceof Error ? error : new Error(`Failed to decode image: ${String(error)}`)
+      );
     image.src = buffer;
   });
 }

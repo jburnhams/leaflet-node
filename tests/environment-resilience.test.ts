@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 
 describe('environment resilience', () => {
   afterEach(() => {
@@ -193,7 +193,7 @@ describe('environment resilience', () => {
 
     // We can't easily test this in vitest since import.meta.url is always file://,
     // but we can verify that createRequire would fail with HTTP URLs
-    const { createRequire: originalCreateRequire } = require('module');
+    const { createRequire: originalCreateRequire } = require('node:module');
 
     // Verify that createRequire rejects HTTP URLs
     expect(() => {
@@ -208,7 +208,7 @@ describe('environment resilience', () => {
     // This test reproduces the bug where the bundler's import.meta.url polyfill
     // crashes when document.baseURI is 'about:blank' (the default for jsdom without a URL).
     //
-    // The bundler (tsup/esbuild) creates a polyfill like:
+    // The bundler creates a polyfill like:
     // var getImportMetaUrl = () => typeof document === "undefined"
     //   ? new URL(`file:${__filename}`).href
     //   : document.currentScript?.src || new URL("main.js", document.baseURI).href;

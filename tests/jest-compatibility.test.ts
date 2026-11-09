@@ -24,10 +24,11 @@ describe('Jest Compatibility', () => {
         (globalThis as any).ReadableStream = originalReadableStream;
       }
 
-      const [{ resetReadableStreamPolyfillForTests }, { resetUndiciPolyfillsForTests }] = await Promise.all([
-        import('../src/polyfills/readable-stream.js'),
-        import('../src/polyfills/undici.js')
-      ]);
+      const [{ resetReadableStreamPolyfillForTests }, { resetUndiciPolyfillsForTests }] =
+        await Promise.all([
+          import('../src/polyfills/readable-stream.js'),
+          import('../src/polyfills/undici.js'),
+        ]);
 
       resetReadableStreamPolyfillForTests();
       resetUndiciPolyfillsForTests();
@@ -37,7 +38,7 @@ describe('Jest Compatibility', () => {
     it('should throw when importing undici without ReadableStream', () => {
       const script = "delete globalThis.ReadableStream; import('undici');";
       const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
-        encoding: 'utf8'
+        encoding: 'utf8',
       });
 
       expect(result.status).not.toBe(0);
@@ -84,7 +85,7 @@ describe('Jest Compatibility', () => {
         expect(id).toBeDefined();
 
         // Wait for setImmediate to execute
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         expect(called).toBe(true);
       });
 
@@ -96,7 +97,7 @@ describe('Jest Compatibility', () => {
         globalThis.clearImmediate(id);
 
         // Wait to ensure it doesn't execute
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         expect(called).toBe(false);
       });
     });
@@ -179,7 +180,8 @@ describe('Jest Compatibility', () => {
         });
 
         // Set a valid image source (data URI)
-        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        img.src =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
         await loadPromise;
       }, 10000);
@@ -205,7 +207,8 @@ describe('Jest Compatibility', () => {
           };
         });
 
-        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        img.src =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
         await loadPromise;
       }, 10000);
@@ -218,7 +221,11 @@ describe('Jest Compatibility', () => {
 
         const bothCalledPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
-            reject(new Error(`Timeout - addEventListener: ${addEventListenerCalled}, onload: ${onloadCalled}`));
+            reject(
+              new Error(
+                `Timeout - addEventListener: ${addEventListenerCalled}, onload: ${onloadCalled}`
+              )
+            );
           }, 5000);
 
           const checkBoth = () => {
@@ -239,7 +246,8 @@ describe('Jest Compatibility', () => {
           };
         });
 
-        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        img.src =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
         await bothCalledPromise;
 
@@ -262,7 +270,8 @@ describe('Jest Compatibility', () => {
           });
         });
 
-        img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        img.src =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
         await expect(loaded).resolves.toBe(true);
         expect(img.width).toBe(1);

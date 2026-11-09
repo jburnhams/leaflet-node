@@ -69,7 +69,9 @@ export function createTestMap(options: CreateTestMapOptions = {}): LeafletHeadle
 
   const container = (global as any).document?.createElement('div');
   if (!container) {
-    throw new Error('leaflet-node: DOM is not initialised. Import leaflet-node before calling createTestMap.');
+    throw new Error(
+      'leaflet-node: DOM is not initialised. Import leaflet-node before calling createTestMap.'
+    );
   }
 
   container.style.width = `${width}px`;
@@ -125,7 +127,10 @@ export async function cleanupTestMaps(): Promise<void> {
       map.eachLayer((layer) => {
         const layerWithFrame = layer as any;
         // Access internal _frame property to cancel pending animation frames
-        if ((layer instanceof LeafletPatched.Canvas || layer instanceof LeafletPatched.SVG) && layerWithFrame._frame) {
+        if (
+          (layer instanceof LeafletPatched.Canvas || layer instanceof LeafletPatched.SVG) &&
+          layerWithFrame._frame
+        ) {
           LeafletPatched.Util.cancelAnimFrame(layerWithFrame._frame);
           layerWithFrame._frame = null;
         }
@@ -134,7 +139,7 @@ export async function cleanupTestMaps(): Promise<void> {
       map.remove();
 
       const container = typeof map.getContainer === 'function' ? map.getContainer() : undefined;
-      if (container && container.parentNode) {
+      if (container?.parentNode) {
         container.parentNode.removeChild(container);
       }
     } catch (error) {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import * as path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import * as path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fetch as undiciFetch, ProxyAgent, type Dispatcher } from 'undici';
 import L from '../src/index.js';
 import { analyzePng } from './helpers/png-analysis.js';
@@ -29,7 +29,7 @@ async function waitForTileLayer(tileLayer: any, timeoutMs = 20000): Promise<void
 }
 
 function resolveProxyDispatcher(): Dispatcher | null {
-  const env = typeof process !== 'undefined' ? process.env ?? {} : {};
+  const env = typeof process !== 'undefined' ? (process.env ?? {}) : {};
   const proxyUrl =
     env.HTTPS_PROXY ||
     env.https_proxy ||
@@ -58,7 +58,9 @@ describe('Tile rendering', () => {
     try {
       const response = await undiciFetch(tileUrl, dispatcher ? { dispatcher } : undefined);
       if (!response.ok) {
-        remoteTileError = new Error(`OpenStreetMap tile request failed: ${response.status} ${response.statusText}`);
+        remoteTileError = new Error(
+          `OpenStreetMap tile request failed: ${response.status} ${response.statusText}`
+        );
         return;
       }
 
@@ -70,7 +72,7 @@ describe('Tile rendering', () => {
       if (cause?.code) {
         remoteTileError = new Error(
           `Unable to reach OpenStreetMap tile server (${tileUrl}). Network error: ${cause.code}. ` +
-          'Ensure the test environment permits outbound HTTPS requests or configure HTTPS_PROXY.',
+            'Ensure the test environment permits outbound HTTPS requests or configure HTTPS_PROXY.',
           { cause: error as any }
         );
       } else {
@@ -93,7 +95,9 @@ describe('Tile rendering', () => {
 
   it('can download real OpenStreetMap tiles when network is available', async (ctx) => {
     if (!remoteTileBuffer) {
-      console.warn(remoteTileError?.message ?? 'OpenStreetMap tile download skipped due to unknown error');
+      console.warn(
+        remoteTileError?.message ?? 'OpenStreetMap tile download skipped due to unknown error'
+      );
       ctx.skip();
       return;
     }
@@ -112,7 +116,10 @@ describe('Tile rendering', () => {
       tileSize: 256,
       minZoom: 0,
       maxZoom: 0,
-      bounds: [[-85, -180], [85, 180]],
+      bounds: [
+        [-85, -180],
+        [85, 180],
+      ],
     }).addTo(map);
 
     await waitForTileLayer(tileLayer);
@@ -126,7 +133,9 @@ describe('Tile rendering', () => {
 
   it('renders remote OpenStreetMap tiles into exported images when reachable', async (ctx) => {
     if (!remoteTileBuffer) {
-      console.warn(remoteTileError?.message ?? 'OpenStreetMap tile rendering skipped due to unknown error');
+      console.warn(
+        remoteTileError?.message ?? 'OpenStreetMap tile rendering skipped due to unknown error'
+      );
       ctx.skip();
       return;
     }
@@ -138,7 +147,10 @@ describe('Tile rendering', () => {
       tileSize: 256,
       minZoom: 0,
       maxZoom: 0,
-      bounds: [[-85, -180], [85, 180]],
+      bounds: [
+        [-85, -180],
+        [85, 180],
+      ],
     }).addTo(map);
 
     await waitForTileLayer(tileLayer);

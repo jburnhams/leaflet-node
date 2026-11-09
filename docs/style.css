@@ -15,7 +15,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   line-height: 1.6;
   color: var(--text-color);
   background: var(--bg-color);
@@ -87,7 +88,8 @@ h2 {
 }
 
 /* Intro section */
-.intro p, .examples-intro {
+.intro p,
+.examples-intro {
   font-size: 1.1rem;
   line-height: 1.8;
   margin-bottom: 15px;
@@ -114,7 +116,7 @@ h2 {
 }
 
 .installation code {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-size: 0.9rem;
 }
 
@@ -180,7 +182,7 @@ h2 {
 }
 
 .quick-start-details summary::after {
-  content: '▸';
+  content: "▸";
   transition: transform 0.2s ease;
 }
 
@@ -272,7 +274,7 @@ h2 {
 }
 
 .code-summary::after {
-  content: '▸';
+  content: "▸";
   transition: transform 0.2s ease;
   color: var(--primary-color);
 }
@@ -316,7 +318,7 @@ h2 {
   overflow-x: auto;
   font-size: 0.9rem;
   line-height: 1.5;
-  font-family: 'Fira Code', 'Courier New', monospace;
+  font-family: "Fira Code", "Courier New", monospace;
 }
 
 .code-columns {
@@ -377,11 +379,11 @@ h2 {
 }
 
 .client-side h4::before {
-  content: '🌐 ';
+  content: "🌐 ";
 }
 
 .server-side h4::before {
-  content: '🖥️ ';
+  content: "🖥️ ";
 }
 
 .map-container {

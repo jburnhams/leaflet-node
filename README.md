@@ -38,7 +38,7 @@ const map = L.map(container);
 map.setView([51.505538, -0.090005], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors'
+  attribution: '© OpenStreetMap contributors',
 }).addTo(map);
 
 map.setSize(600, 400);
@@ -51,13 +51,13 @@ await map.saveImage('map.png');
 Importing `leaflet-node` sets up a jsdom window, a native canvas and Leaflet itself, then returns the
 normal Leaflet namespace. Everything you know from Leaflet works as usual; leaflet-node adds:
 
-| API | What it does |
-| --- | --- |
-| `map.setSize(width, height)` | Sets the map's pixel size (jsdom has no layout engine). |
-| `map.toBuffer(format?, quality?)` | Renders the current view to a PNG or JPEG `Buffer`. `quality` (0 to 1) applies to JPEG only. |
-| `map.saveImage(filename, { format?, quality? })` | Renders the view and writes it to disk. Resolves with the filename. |
-| `initializeEnvironment(options)` | Changes the defaults for maps created afterwards: `mapSize` (default 1024×1024), `enableAnimations` (default `false`), `userAgent` (the jsdom `navigator.userAgent`), `fontAssetBasePath`. |
-| `setFontAssetBasePath(path)` | Points the fallback font loader at a custom font file or directory. |
+| API                                              | What it does                                                                                                                                                                               |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `map.setSize(width, height)`                     | Sets the map's pixel size (jsdom has no layout engine).                                                                                                                                    |
+| `map.toBuffer(format?, quality?)`                | Renders the current view to a PNG or JPEG `Buffer`. `quality` (0 to 1) applies to JPEG only.                                                                                               |
+| `map.saveImage(filename, { format?, quality? })` | Renders the view and writes it to disk. Resolves with the filename.                                                                                                                        |
+| `initializeEnvironment(options)`                 | Changes the defaults for maps created afterwards: `mapSize` (default 1024×1024), `enableAnimations` (default `false`), `userAgent` (the jsdom `navigator.userAgent`), `fontAssetBasePath`. |
+| `setFontAssetBasePath(path)`                     | Points the fallback font loader at a custom font file or directory.                                                                                                                        |
 
 ```ts
 import L, { initializeEnvironment } from 'leaflet-node';
@@ -244,6 +244,20 @@ Lower-case names work too. Changes are picked up on the next request.
 - **Reuse map instances** – keep a single map around and update the view instead of creating a new `L.map()` for every render.
 - **Batch exports** – kick off multiple independent exports with `Promise.all()` when your server has headroom.
 - **Manage memory** – always call `map.remove()` and drop references once you are done with a map so Node.js can reclaim resources.
+
+## Development
+
+```bash
+npm ci
+npm run lint          # Biome: lint + format check
+npm run format        # Biome: apply formatting
+npm run typecheck     # TypeScript 7
+npm run test:coverage # builds with tsdown, then runs Vitest with coverage
+npm run test:docs     # builds the docs site and checks the rendered examples
+```
+
+`tests/jest-fixture` runs the built package under `jest-environment-jsdom` to make sure it keeps
+working inside consumers' Jest suites.
 
 ---
 

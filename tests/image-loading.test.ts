@@ -7,15 +7,17 @@ import { promises as fs } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import type { AddressInfo } from 'node:net';
 import { createCanvas } from '@napi-rs/canvas';
-import {
-  DEFAULT_USER_AGENT,
-  loadImageSource,
-  resolveProxyDispatcher,
-} from '../src/image.js';
+import { DEFAULT_USER_AGENT, loadImageSource, resolveProxyDispatcher } from '../src/image.js';
 
 const PROXY_ENV_KEYS = [
-  'HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy',
-  'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy',
+  'HTTP_PROXY',
+  'http_proxy',
+  'HTTPS_PROXY',
+  'https_proxy',
+  'ALL_PROXY',
+  'all_proxy',
+  'NO_PROXY',
+  'no_proxy',
 ];
 
 function makePng(width: number, height: number): Buffer {
@@ -49,6 +51,13 @@ describe('loadImageSource', () => {
   let tmpDir: string;
 
   beforeAll(async () => {
+    // Isolate every test from proxy variables set in the surrounding shell/CI
+    savedEnv = {};
+    for (const key of PROXY_ENV_KEYS) {
+      savedEnv[key] = process.env[key];
+      delete process.env[key];
+    }
+
     tileServer = http.createServer((req, res) => {
       requests.push(req.headers);
       if (req.url?.startsWith('/missing')) {
@@ -91,18 +100,14 @@ describe('loadImageSource', () => {
   });
 
   afterAll(async () => {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value !== undefined) {
+        process.env[key] = value;
+      }
+    }
     await close(tileServer);
     await close(proxyServer);
     await fs.rm(tmpDir, { recursive: true, force: true });
-  });
-
-  beforeAll(() => {
-    // Isolate every test from proxy variables set in the surrounding shell/CI
-    savedEnv = {};
-    for (const key of PROXY_ENV_KEYS) {
-      savedEnv[key] = process.env[key];
-      delete process.env[key];
-    }
   });
 
   afterEach(() => {
@@ -111,14 +116,6 @@ describe('loadImageSource', () => {
     }
     proxyHits = 0;
     requests.length = 0;
-  });
-
-  afterAll(() => {
-    for (const [key, value] of Object.entries(savedEnv)) {
-      if (value !== undefined) {
-        process.env[key] = value;
-      }
-    }
   });
 
   it('loads images over HTTP and sends an identifying User-Agent', async () => {
@@ -145,6 +142,16 @@ describe('loadImageSource', () => {
     expect(proxyHits).toBeGreaterThan(0);
   });
 
+  it('shares one proxy agent across concurrent first requests', async () => {
+    process.env.HTTP_PROXY = `http://127.0.0.1:${proxyPort}`;
+
+    const urls = Array.from({ length: 8 }, (_, i) => `http://127.0.0.1:${tilePort}/tile-${i}.png`);
+    const images = await Promise.all(urls.map((url) => loadImageSource(url)));
+
+    expect(images.every((image) => image.width === 4)).toBe(true);
+    expect(proxyHits).toBeGreaterThan(0);
+  });
+
   it('bypasses the proxy for hosts listed in NO_PROXY', async () => {
     process.env.HTTP_PROXY = `http://127.0.0.1:${proxyPort}`;
     process.env.NO_PROXY = '127.0.0.1';
@@ -155,23 +162,23 @@ describe('loadImageSource', () => {
     expect(proxyHits).toBe(0);
   });
 
-  it('falls back to ALL_PROXY when no scheme-specific proxy is set', () => {
-    expect(resolveProxyDispatcher()).toBeNull();
+  it('falls back to ALL_PROXY when no scheme-specific proxy is set', async () => {
+    expect(await resolveProxyDispatcher()).toBeNull();
 
     process.env.ALL_PROXY = `http://127.0.0.1:${proxyPort}`;
-    expect(resolveProxyDispatcher()).not.toBeNull();
+    expect(await resolveProxyDispatcher()).not.toBeNull();
   });
 
-  it('picks up proxy variable changes made after the first request', () => {
-    expect(resolveProxyDispatcher()).toBeNull();
+  it('picks up proxy variable changes made after the first request', async () => {
+    expect(await resolveProxyDispatcher()).toBeNull();
 
     process.env.HTTPS_PROXY = `http://127.0.0.1:${proxyPort}`;
-    const first = resolveProxyDispatcher();
+    const first = await resolveProxyDispatcher();
     expect(first).not.toBeNull();
-    expect(resolveProxyDispatcher()).toBe(first);
+    expect(await resolveProxyDispatcher()).toBe(first);
 
     delete process.env.HTTPS_PROXY;
-    expect(resolveProxyDispatcher()).toBeNull();
+    expect(await resolveProxyDispatcher()).toBeNull();
   });
 
   it('decodes file:// URLs, including escaped characters and query strings', async () => {

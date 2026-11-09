@@ -17,15 +17,26 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     },
     "./testing": {
-      "types": "./dist/testing.d.ts",
-      "import": "./dist/testing.mjs",
-      "require": "./dist/testing.js"
-    }
+      "import": {
+        "types": "./dist/testing.d.mts",
+        "default": "./dist/testing.mjs"
+      },
+      "require": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
+      }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -34,20 +45,23 @@
   ],
   "scripts": {
     "build": "tsx scripts/build-wrapper.ts",
-    "dev": "tsup --watch",
+    "dev": "tsdown --watch",
     "test": "npm run test:unit && npm run test:docs",
     "test:unit": "vitest run --exclude tests/docs.test.ts",
     "test:docs": "vitest run tests/docs.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --exclude tests/docs.test.ts",
-    "lint": "eslint src",
+    "lint": "biome check .",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm run test",
     "release": "npm version patch && npm publish",
     "release:minor": "npm version minor && npm publish",
     "release:major": "npm version major && npm publish",
     "build:docs": "npm run build && tsx scripts/build-docs.ts",
-    "preview:docs": "npm run build:docs && npx serve docs-dist"
+    "preview:docs": "npm run build:docs && npx serve docs-dist",
+    "format": "biome format --write .",
+    "pretest:unit": "npm run build",
+    "pretest:coverage": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -72,24 +86,19 @@
     "undici": "^8.12.4"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/jest": "^30.0.0",
+    "@biomejs/biome": "^2.6.6",
     "@types/jsdom": "^30.0.0",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^22.20.5",
     "@vitest/coverage-v8": "^5.1.0",
-    "eslint": "^10.14.0",
-    "globals": "^17.14.0",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "leaflet": "^1.9.4",
     "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
-    "ts-jest": "^29.4.15",
-    "tsup": "^9.0.0",
+    "tsdown": "^0.23.7",
     "tsx": "^4.23.15",
-    "typescript": "~6.0.3",
-    "typescript-eslint": "^8.72.2",
+    "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   },
   "overrides": {

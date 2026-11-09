@@ -1,4 +1,4 @@
-name: 'Bump Version and Release'
+name: "Bump Version and Release"
 
 on:
   workflow_run:
@@ -10,49 +10,49 @@ on:
 
 jobs:
   bump-version:
-    name: 'Bump Version on main'
+    name: "Bump Version on main"
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: 'Checkout source code'
-        uses: 'actions/checkout@v4'
+      - name: "Checkout source code"
+        uses: "actions/checkout@v4"
         with:
           ref: main
 
-      - name: 'Setup Node.js'
-        uses: 'actions/setup-node@v4'
+      - name: "Setup Node.js"
+        uses: "actions/setup-node@v4"
         with:
-          node-version: '24'
+          node-version: "24"
 
-      - name: 'cat package.json'
+      - name: "cat package.json"
         run: cat ./package.json
 
-      - name: 'Automated Version Bump'
+      - name: "Automated Version Bump"
         id: version-bump
-        uses: 'phips28/gh-action-bump-version@v11.0.7'
+        uses: "phips28/gh-action-bump-version@v11.0.7"
         with:
-          tag-prefix: 'v'
-          major-wording: 'major,Major,breaking,Breaking'
-          minor-wording: 'minor,Minor,feat,Feat,feature,Feature'
-          patch-wording: 'patch,Patch,fix,Fix,fixes,Fixes'
-          rc-wording: 'rc,pre,beta,alpha'  # For pre-releases
-          commit-message: 'ci: bump version to {{version}} [skip ci]'  # Skips re-triggering
-          push: true  # Pushes the commit/tag back to main
+          tag-prefix: "v"
+          major-wording: "major,Major,breaking,Breaking"
+          minor-wording: "minor,Minor,feat,Feat,feature,Feature"
+          patch-wording: "patch,Patch,fix,Fix,fixes,Fixes"
+          rc-wording: "rc,pre,beta,alpha" # For pre-releases
+          commit-message: "ci: bump version to {{version}} [skip ci]" # Skips re-triggering
+          push: true # Pushes the commit/tag back to main
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
-      - name: 'cat package.json'
+      - name: "cat package.json"
         run: cat ./package.json
 
-      - name: 'Output Step'
+      - name: "Output Step"
         env:
           NEW_TAG: ${{ steps.version-bump.outputs.newTag }}
         run: echo "new tag $NEW_TAG"
 
-      - name: 'Create GitHub Release'
+      - name: "Create GitHub Release"
         if: ${{ steps.version-bump.outputs.newTag }}
-        uses: 'softprops/action-gh-release@v2'
+        uses: "softprops/action-gh-release@v2"
         with:
           tag_name: ${{ steps.version-bump.outputs.newTag }}
           name: Release ${{ steps.version-bump.outputs.newTag }}

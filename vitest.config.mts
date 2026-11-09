@@ -7,7 +7,7 @@ export default defineConfig({
     testTimeout: 60000,
     hookTimeout: 60000,
     include: ['tests/**/*.test.ts'],
-    exclude: ['tests/jest-fixture/**/*.test.ts'],
+    exclude: ['tests/jest-fixture/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

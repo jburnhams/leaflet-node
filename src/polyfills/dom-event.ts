@@ -1,4 +1,3 @@
-
 import type * as LeafletModule from 'leaflet';
 
 /**
@@ -7,7 +6,7 @@ import type * as LeafletModule from 'leaflet';
  * to detachEvent (which is also missing), causing a crash.
  */
 export function patchDomEvent(L: typeof LeafletModule): void {
-  if (!L || !L.DomEvent) {
+  if (!L?.DomEvent) {
     return;
   }
 
@@ -25,14 +24,17 @@ export function patchDomEvent(L: typeof LeafletModule): void {
 
   // We use ...args to preserve arguments.length, which Leaflet relies on internally
   // to distinguish between off(obj, type, fn) and off(obj, type)
-  L.DomEvent.off = function(this: any, ...args: any[]) {
+  L.DomEvent.off = function (this: any, ...args: any[]) {
     try {
       return (L.DomEvent as any)._originalOff.apply(this, args);
     } catch (e: any) {
       // Swallow "detachEvent is not a function" errors
       // This happens when Leaflet tries to clean up a Canvas element that lacks event methods
       // or when it detects an environment that looks like IE
-      if (e instanceof TypeError && (e.message.includes('detachEvent') || e.message.includes('not a function'))) {
+      if (
+        e instanceof TypeError &&
+        (e.message.includes('detachEvent') || e.message.includes('not a function'))
+      ) {
         return this;
       }
       throw e;
@@ -42,16 +44,13 @@ export function patchDomEvent(L: typeof LeafletModule): void {
   // Patch getMousePosition to support JSDOM environments where getBoundingClientRect works
   // but offsetParent/clientLeft/clientTop layout properties might not be perfect
   // Use 'any' for the event type to avoid TypeScript issues if Touch is not defined globally in strict environments
-  L.DomEvent.getMousePosition = function(e: any, container?: HTMLElement): LeafletModule.Point {
-    if (container && container.getBoundingClientRect) {
+  L.DomEvent.getMousePosition = (e: any, container?: HTMLElement): LeafletModule.Point => {
+    if (container?.getBoundingClientRect) {
       const rect = container.getBoundingClientRect();
       const clientLeft = container.clientLeft || 0;
       const clientTop = container.clientTop || 0;
 
-      return new L.Point(
-        e.clientX - rect.left - clientLeft,
-        e.clientY - rect.top - clientTop
-      );
+      return new L.Point(e.clientX - rect.left - clientLeft, e.clientY - rect.top - clientTop);
     }
 
     // Fallback to original implementation if container doesn't have getBoundingClientRect

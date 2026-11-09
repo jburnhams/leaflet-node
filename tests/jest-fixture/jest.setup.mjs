@@ -1,6 +1,7 @@
 import { jest as jestGlobals } from '@jest/globals';
 import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from 'node:util';
-import '../../src/polyfills/apply.js';
+// Load the built package first, as a consumer would; it installs the undici polyfills
+import '../../dist/index.mjs';
 
 // Ensure Jest uses real timers so our timer wrappers behave consistently
 jestGlobals.useRealTimers();
@@ -12,5 +13,5 @@ if (typeof globalThis.TextEncoder === 'undefined') {
 }
 
 if (typeof globalThis.TextDecoder === 'undefined' && typeof NodeTextDecoder !== 'undefined') {
-  globalThis.TextDecoder = NodeTextDecoder as typeof globalThis.TextDecoder;
+  globalThis.TextDecoder = NodeTextDecoder;
 }

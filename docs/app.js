@@ -29,9 +29,10 @@ function formatCode(codeString) {
     return Math.min(min, leading);
   }, Infinity);
 
-  const normalized = indent === Infinity
-    ? lines
-    : lines.map((line) => (line.startsWith(' '.repeat(indent)) ? line.slice(indent) : line));
+  const normalized =
+    indent === Infinity
+      ? lines
+      : lines.map((line) => (line.startsWith(' '.repeat(indent)) ? line.slice(indent) : line));
 
   return normalized.join('\n');
 }
@@ -109,8 +110,8 @@ function createCodeSection(example) {
       elements.push(columns);
     }
   } else {
-    const sharedCode = codeDetails.shared
-      || (typeof example.setup === 'function' ? example.setup.toString() : '');
+    const sharedCode =
+      codeDetails.shared || (typeof example.setup === 'function' ? example.setup.toString() : '');
 
     if (sharedCode) {
       const label = codeDetails.sharedLabel || 'Shared Leaflet setup (browser + Node)';
@@ -123,8 +124,9 @@ function createCodeSection(example) {
     elements.push(notesElement);
   }
 
-  const descriptionText = codeDetails.description
-    || `Use this configuration with Leaflet.js in the browser or leaflet-node on the server. In Node set the map size to ${example.width}×${example.height} before exporting.`;
+  const descriptionText =
+    codeDetails.description ||
+    `Use this configuration with Leaflet.js in the browser or leaflet-node on the server. In Node set the map size to ${example.width}×${example.height} before exporting.`;
 
   if (elements.length === 0 && !descriptionText) {
     return null;

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
@@ -50,7 +50,7 @@ describe('CommonJS API Compatibility', () => {
       const result = spawnSync(process.execPath, ['-e', script], {
         cwd: process.cwd(),
         encoding: 'utf8',
-        env: { ...process.env }
+        env: { ...process.env },
       });
 
       if (result.status !== 0) {
@@ -106,7 +106,7 @@ describe('CommonJS API Compatibility', () => {
       const result = spawnSync(process.execPath, ['-e', script], {
         cwd: process.cwd(),
         encoding: 'utf8',
-        env: { ...process.env }
+        env: { ...process.env },
       });
 
       if (result.status !== 0) {
@@ -152,7 +152,7 @@ describe('CommonJS API Compatibility', () => {
       const result = spawnSync(process.execPath, ['-e', script], {
         cwd: process.cwd(),
         encoding: 'utf8',
-        env: { ...process.env }
+        env: { ...process.env },
       });
 
       if (result.status !== 0) {
@@ -211,7 +211,7 @@ describe('CommonJS API Compatibility', () => {
 
     afterEach(() => {
       // Clean up temp files
-      tempFiles.forEach(file => {
+      tempFiles.forEach((file) => {
         try {
           unlinkSync(file);
         } catch {
@@ -257,7 +257,7 @@ describe('CommonJS API Compatibility', () => {
       const result = spawnSync(process.execPath, [testFile], {
         cwd: process.cwd(),
         encoding: 'utf8',
-        env: { ...process.env }
+        env: { ...process.env },
       });
 
       if (result.status !== 0) {
@@ -298,7 +298,7 @@ describe('CommonJS API Compatibility', () => {
       const result = spawnSync(process.execPath, [testFile], {
         cwd: process.cwd(),
         encoding: 'utf8',
-        env: { ...process.env }
+        env: { ...process.env },
       });
 
       if (result.status !== 0) {
@@ -318,8 +318,14 @@ describe('CommonJS API Compatibility', () => {
       expect(pkg.main).toBe('./dist/index.js');
       expect(pkg.module).toBe('./dist/index.mjs');
       expect(pkg.exports['.']).toBeDefined();
-      expect(pkg.exports['.'].require).toBe('./dist/index.js');
-      expect(pkg.exports['.'].import).toBe('./dist/index.mjs');
+      expect(pkg.exports['.'].require).toEqual({
+        types: './dist/index.d.ts',
+        default: './dist/index.js',
+      });
+      expect(pkg.exports['.'].import).toEqual({
+        types: './dist/index.d.mts',
+        default: './dist/index.mjs',
+      });
     });
   });
 
@@ -358,7 +364,7 @@ describe('CommonJS API Compatibility', () => {
       const result = spawnSync(process.execPath, ['-e', script], {
         cwd: process.cwd(),
         encoding: 'utf8',
-        env: { ...process.env }
+        env: { ...process.env },
       });
 
       if (result.status !== 0) {

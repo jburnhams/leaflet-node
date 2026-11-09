@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type { TileLayer } from 'leaflet';
 import {
   createTestMap,
@@ -33,7 +33,9 @@ describe('testing utilities', () => {
     class FakeTileLayer extends EventEmitter {
       _loading = true;
       _tilesToLoad = 2;
-      getTileUrl() { return ''; }
+      getTileUrl() {
+        return '';
+      }
       on(event: string, listener: (...args: any[]) => void) {
         this.addListener(event, listener);
         return this as unknown as TileLayer;
@@ -73,7 +75,9 @@ describe('testing utilities', () => {
     class ErrorTileLayer extends EventEmitter {
       _loading = true;
       _tilesToLoad = 1;
-      getTileUrl() { return ''; }
+      getTileUrl() {
+        return '';
+      }
       on(event: string, listener: (...args: any[]) => void) {
         this.addListener(event, listener);
         return this as unknown as TileLayer;
@@ -97,7 +101,9 @@ describe('testing utilities', () => {
     class FinalErrorTileLayer extends EventEmitter {
       _loading = true;
       _tilesToLoad = 1;
-      getTileUrl() { return ''; }
+      getTileUrl() {
+        return '';
+      }
       on(event: string, listener: (...args: any[]) => void) {
         this.addListener(event, listener);
         return this as unknown as TileLayer;

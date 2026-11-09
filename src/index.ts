@@ -9,6 +9,7 @@
 import './polyfills/apply.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 import { createCanvas } from '@napi-rs/canvas';
 import type * as LeafletModule from 'leaflet';
 import type { LeafletHeadlessMap, HeadlessOptions, ImageExportOptions } from './types.js';
@@ -21,9 +22,7 @@ import { patchDomEvent } from './polyfills/dom-event.js';
 
 // Extend global namespace for headless environment
 declare global {
-  // eslint-disable-next-line no-var
   var L_DISABLE_3D: boolean;
-  // eslint-disable-next-line no-var
   var L_NO_TOUCH: boolean;
 }
 
@@ -40,10 +39,52 @@ const DEFAULT_OPTIONS: ResolvedHeadlessOptions = {
 };
 
 /**
- * Initialize the headless environment (called automatically)
+ * Options shared by every patched map. initializeEnvironment() mutates this
+ * object in place so that options passed after the automatic initialisation
+ * still apply to maps created afterwards.
+ */
+const activeOptions: ResolvedHeadlessOptions = { ...DEFAULT_OPTIONS };
+
+function applyOptions(options: HeadlessOptions): void {
+  if (options.mapSize) {
+    activeOptions.mapSize = { ...options.mapSize };
+  }
+  if (typeof options.enableAnimations === 'boolean') {
+    activeOptions.enableAnimations = options.enableAnimations;
+  }
+  if (typeof options.userAgent === 'string') {
+    activeOptions.userAgent = options.userAgent;
+  }
+  if (typeof options.fontAssetBasePath === 'string') {
+    activeOptions.fontAssetBasePath = options.fontAssetBasePath;
+  }
+}
+
+function applyUserAgent(navigator: Navigator | undefined): void {
+  if (!navigator) {
+    return;
+  }
+  try {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: activeOptions.userAgent,
+      writable: true,
+      configurable: true,
+    });
+  } catch {
+    // Some environments expose a non-configurable userAgent; leave it as is.
+  }
+}
+
+/**
+ * Initialise the headless environment.
+ *
+ * This runs automatically when leaflet-node is imported. Call it again to
+ * change the defaults (map size, animations, user agent, font path) for maps
+ * created afterwards. Returns the patched Leaflet namespace.
  */
 function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletModule {
-  const opts: ResolvedHeadlessOptions = { ...DEFAULT_OPTIONS, ...options };
+  applyOptions(options);
+  const opts = activeOptions;
 
   ensureDefaultFontsRegistered(opts.fontAssetBasePath, {
     suppressWarningsUntilConfigured: typeof opts.fontAssetBasePath === 'undefined',
@@ -54,6 +95,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
 
   // Return existing Leaflet instance if already initialized
   if ((global as any).L) {
+    if (typeof options.userAgent === 'string') {
+      applyUserAgent((global as any).window?.navigator);
+    }
     return (global as any).L;
   }
 
@@ -154,8 +198,8 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
         }
       };
 
-      // Invoke load without additional catch to avoid double error handling
-      load();
+      // load() handles its own errors by dispatching an 'error' event
+      void load();
     }
   });
 
@@ -187,9 +231,9 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
     } catch (error) {
       const hint = new Error(
         'leaflet-node: Canvas initialization failed. Ensure @napi-rs/canvas is installed correctly. ' +
-        'If you are running tests with Jest, use @jest-environment node or import leaflet-node before jsdom is created.'
+        'If you are running tests with Jest, use @jest-environment node or import leaflet-node before jsdom is created.',
+        { cause: error }
       );
-      (hint as any).cause = error;
       console.error('leaflet-node: Canvas initialization failed', error);
       throw hint;
     }
@@ -288,11 +332,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   global.L_DISABLE_3D = true;
   global.L_NO_TOUCH = true;
 
-  // Set user agent
-  Object.defineProperty(dom.window.navigator, 'userAgent', {
-    value: opts.userAgent,
-    writable: true,
-  });
+  applyUserAgent(dom.window.navigator);
 
   // Load Leaflet
   const requireFn = getSafeRequire();
@@ -304,7 +344,7 @@ function initializeEnvironment(options: HeadlessOptions = {}): typeof LeafletMod
   // Compute the leaflet directory path
   const scriptName = leafletPath.split(path.sep).pop() || '';
   const leafletDir = leafletPath.substring(0, leafletPath.length - scriptName.length);
-  const iconImagePath = `file://${leafletDir}images${path.sep}`;
+  const iconImagePath = `${pathToFileURL(path.join(leafletDir, 'images')).href}/`;
 
   // L.Icon.Default may not be initialized yet in some environments (e.g., Jest/jsdom)
   if (L.Icon && L.Icon.Default) {
@@ -359,6 +399,8 @@ function patchMapPrototype(
   L: typeof LeafletModule,
   options: ResolvedHeadlessOptions
 ): void {
+  // `options` is the shared activeOptions object, so later initializeEnvironment()
+  // calls are picked up here without re-patching.
   // Patch mouseEventToContainerPoint to ensure it uses the patched DomEvent.getMousePosition
   // This is necessary because Leaflet might use a local reference to getMousePosition
   // which bypasses our patch on L.DomEvent.getMousePosition
@@ -460,7 +502,7 @@ function patchMapPrototype(
       await fs.writeFile(filename, buffer);
       return filename;
     } catch (err) {
-      throw new Error(`Failed to save map image: ${(err as Error).message}`);
+      throw new Error(`Failed to save map image: ${(err as Error).message}`, { cause: err });
     }
   };
 
@@ -486,10 +528,11 @@ function patchMapPrototype(
       }
       return canvas.toBuffer('image/png');
     } catch (err) {
-      throw new Error(`Failed to export map to buffer: ${(err as Error).message}`);
+      throw new Error(`Failed to export map to buffer: ${(err as Error).message}`, { cause: err });
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- re-bound via .call below
   const originalRemove = L.Map.prototype.remove;
   if (typeof originalRemove === 'function') {
     L.Map.prototype.remove = function (this: L.Map) {

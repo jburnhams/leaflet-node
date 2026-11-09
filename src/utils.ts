@@ -8,7 +8,6 @@ export function getImportMetaUrlSafely(): string | undefined {
   try {
     // Use eval to get import.meta.url dynamically to prevent bundler from creating
     // a module-level polyfill that crashes with 'about:blank'
-    // eslint-disable-next-line no-eval
     return eval('import.meta.url');
   } catch {
     return undefined;
@@ -33,8 +32,7 @@ export function getSafeRequire(): NodeJS.Require {
   if (hasDocument) {
     try {
       // In jsdom environment, use eval('require') to get the require function
-      // eslint-disable-next-line no-eval
-      const req = eval('require') as NodeJS.Require;
+        const req = eval('require') as NodeJS.Require;
       // Verify that require actually works
       if (typeof req === 'function' && typeof req.resolve === 'function') {
         return req;
@@ -51,8 +49,7 @@ export function getSafeRequire(): NodeJS.Require {
   if (!importMetaUrl) {
     // Try eval('require') first
     try {
-      // eslint-disable-next-line no-eval
-      return eval('require') as NodeJS.Require;
+        return eval('require') as NodeJS.Require;
     } catch {
       // require not available in eval context
     }
@@ -89,8 +86,7 @@ export function getSafeRequire(): NodeJS.Require {
   // But if that fails, still attempt createRequire as a last resort
   if (importMetaUrlIsHttp) {
     try {
-      // eslint-disable-next-line no-eval
-      return eval('require') as NodeJS.Require;
+        return eval('require') as NodeJS.Require;
     } catch {
       // require is not available (e.g., Jest with ESM)
       // Fall through to try createRequire anyway - it will likely fail but might work

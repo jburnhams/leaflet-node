@@ -288,7 +288,7 @@ export async function mapToCanvas(map: any): Promise<Canvas> {
     tempCircle.remove();
   }
 
-  await drawPopupOverlays(map, ctx, size);
+  drawPopupOverlays(map, ctx, size);
 
   return canvas;
 }
@@ -454,11 +454,11 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
-async function drawPopupOverlays(
+function drawPopupOverlays(
   map: any,
   ctx: RenderingContext,
   size?: { x: number; y: number }
-): Promise<void> {
+): void {
   const popupLayers = collectPopupLayers(map);
   if (popupLayers.length === 0) {
     return;
@@ -486,7 +486,6 @@ async function drawPopupOverlays(
 
     const wrapperBottom = top + height;
     const tipCenterX = anchor.x;
-    const tipCenterY = anchor.y - tipHalfDiagonal;
     const tipBaseY = wrapperBottom - wrapperPadding;
     const tipLeftBaseX = tipCenterX - tipHalfDiagonal;
     const tipRightBaseX = tipCenterX + tipHalfDiagonal;

@@ -13,6 +13,14 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.d.ts', 'src/types.ts'],
+      // Floor just under the current numbers so regressions fail CI.
+      // The jsdom-only polyfill branches run in the Jest subprocess and are not counted.
+      thresholds: {
+        statements: 78,
+        lines: 78,
+        functions: 72,
+        branches: 62,
+      },
     },
   },
 });

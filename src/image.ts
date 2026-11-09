@@ -5,33 +5,63 @@
 
 import './polyfills/apply.js';
 import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
 import { Image as CanvasImage } from '@napi-rs/canvas';
-import { ProxyAgent, fetch, type Dispatcher } from 'undici';
+import { EnvHttpProxyAgent, fetch, type Dispatcher } from 'undici';
 
-let cachedDispatcher: Dispatcher | null | undefined;
+/**
+ * Identifies leaflet-node to tile servers. Many providers (including the
+ * OpenStreetMap tile servers) reject requests without a descriptive User-Agent.
+ */
+export const DEFAULT_USER_AGENT = 'leaflet-node (+https://github.com/jburnhams/leaflet-node)';
 
-async function resolveProxyDispatcher(): Promise<Dispatcher | null> {
-  if (cachedDispatcher !== undefined) {
-    return cachedDispatcher;
-  }
+/** Requests for a single image are aborted after this many milliseconds. */
+export const IMAGE_REQUEST_TIMEOUT_MS = 30_000;
 
+let cachedDispatcher: { key: string; dispatcher: Dispatcher | null } | undefined;
+
+function readEnv(...names: string[]): string | undefined {
   const env = typeof process !== 'undefined' ? process.env ?? {} : {};
-  const proxyUrl =
-    env.HTTPS_PROXY ||
-    env.https_proxy ||
-    env.HTTP_PROXY ||
-    env.http_proxy ||
-    env.ALL_PROXY ||
-    env.all_proxy ||
-    null;
-
-  if (proxyUrl) {
-    cachedDispatcher = new ProxyAgent(proxyUrl);
-  } else {
-    cachedDispatcher = null;
+  for (const name of names) {
+    const value = env[name];
+    if (value) {
+      return value;
+    }
   }
-  return cachedDispatcher;
+  return undefined;
 }
+
+/**
+ * Build an undici dispatcher from the standard proxy environment variables.
+ *
+ * - `HTTP_PROXY` is used for http:// URLs, `HTTPS_PROXY` for https:// URLs
+ *   (falling back to `HTTP_PROXY`), and `ALL_PROXY` for either.
+ * - `NO_PROXY` hosts bypass the proxy.
+ *
+ * The dispatcher is cached per configuration, so changing the variables at
+ * runtime takes effect on the next request.
+ */
+export function resolveProxyDispatcher(): Dispatcher | null {
+  const allProxy = readEnv('ALL_PROXY', 'all_proxy');
+  const httpProxy = readEnv('HTTP_PROXY', 'http_proxy') ?? allProxy;
+  const httpsProxy = readEnv('HTTPS_PROXY', 'https_proxy') ?? httpProxy;
+  const noProxy = readEnv('NO_PROXY', 'no_proxy') ?? '';
+  const key = JSON.stringify([httpProxy, httpsProxy, noProxy]);
+
+  if (cachedDispatcher?.key === key) {
+    return cachedDispatcher.dispatcher;
+  }
+
+  const dispatcher =
+    httpProxy || httpsProxy ? new EnvHttpProxyAgent({ httpProxy, httpsProxy, noProxy }) : null;
+
+  const previous = cachedDispatcher?.dispatcher;
+  cachedDispatcher = { key, dispatcher };
+  void previous?.close().catch(() => {});
+
+  return dispatcher;
+}
+
 import type { HeadlessImage } from './types.js';
 
 /**
@@ -58,8 +88,12 @@ async function fileExists(path: string): Promise<boolean> {
  * Load image from HTTP/HTTPS URL
  */
 async function loadFromUrl(url: string): Promise<Buffer> {
-  const dispatcher = await resolveProxyDispatcher();
-  const response = await fetch(url, dispatcher ? { dispatcher } : undefined);
+  const dispatcher = resolveProxyDispatcher();
+  const response = await fetch(url, {
+    headers: { 'User-Agent': DEFAULT_USER_AGENT },
+    signal: AbortSignal.timeout(IMAGE_REQUEST_TIMEOUT_MS),
+    ...(dispatcher ? { dispatcher } : {}),
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch image from ${url}: ${response.status} ${response.statusText}`);
@@ -83,6 +117,18 @@ async function loadFromFile(path: string): Promise<Buffer> {
 }
 
 /**
+ * Convert a file:// URL to a filesystem path, decoding escapes such as %20 and
+ * handling Windows drive letters. Malformed URLs fall back to stripping the scheme.
+ */
+function fileUrlToPath(src: string): string {
+  try {
+    return fileURLToPath(stripQuerystring(src));
+  } catch {
+    return src.substring('file://'.length);
+  }
+}
+
+/**
  * Load image data from supported sources and return a CanvasImage
  */
 export async function loadImageSource(src: string): Promise<CanvasImage> {
@@ -101,8 +147,7 @@ export async function loadImageSource(src: string): Promise<CanvasImage> {
     const data = src.substring(commaIndex + 1);
     buffer = Buffer.from(data, isBase64 ? 'base64' : 'utf-8');
   } else if (src.startsWith('file://')) {
-    const filePath = src.substring(7);
-    buffer = await loadFromFile(filePath);
+    buffer = await loadFromFile(fileUrlToPath(src));
   } else {
     buffer = await loadFromFile(src);
   }
@@ -117,7 +162,8 @@ async function bufferToImage(buffer: Buffer): Promise<CanvasImage> {
   return await new Promise<CanvasImage>((resolve, reject) => {
     const image = new CanvasImage();
     image.onload = () => resolve(image);
-    image.onerror = (error: unknown) => reject(error);
+    image.onerror = (error: unknown) =>
+      reject(error instanceof Error ? error : new Error(`Failed to decode image: ${String(error)}`));
     image.src = buffer;
   });
 }

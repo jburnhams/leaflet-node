@@ -39,7 +39,7 @@ const FONT_SOURCE_MODULE = '@fontsource/noto-sans';
 const FONT_BASE_PATH_ENV_KEY = 'LEAFLET_NODE_FONT_BASE_PATH';
 
 let baseDirectoryWarningIssued = false;
-let deferredBaseDirectoryWarning: unknown | null = null;
+let deferredBaseDirectoryWarning: unknown = null;
 
 interface EnsureDefaultFontsOptions {
   suppressWarningsUntilConfigured?: boolean;

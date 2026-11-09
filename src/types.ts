@@ -21,7 +21,7 @@ export interface LeafletHeadlessMap extends L.Map {
 
   /**
    * Export the current map view to a Buffer
-    * @param format - Image format ('png' or 'jpeg')
+   * @param format - Image format ('png' or 'jpeg')
    * @param quality - Optional quality hint (0-1 for JPEG)
    * @returns Promise that resolves with the image buffer
    */
@@ -36,7 +36,7 @@ export interface ImageExportOptions {
   format?: 'png' | 'jpeg';
 
   /**
-   * Optional encoder quality (0-1 for JPEG, 0-1 for PNG in @napi-rs/canvas)
+   * Encoder quality from 0 to 1. Only used for JPEG; PNG output is lossless and ignores it.
    */
   quality?: number;
 }
@@ -61,7 +61,8 @@ export interface HeadlessOptions {
   enableAnimations?: boolean;
 
   /**
-   * Custom user agent string
+   * `navigator.userAgent` reported inside the jsdom window (used by Leaflet's
+   * browser detection). This is not the User-Agent header sent to tile servers.
    * @default 'webkit'
    */
   userAgent?: string;

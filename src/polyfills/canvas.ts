@@ -21,7 +21,7 @@ export function ensureCanvasPolyfills(): void {
     if (proto && proto !== Canvas?.prototype) {
        patchPrototype(proto);
     }
-  } catch (e) {
+  } catch {
     // Ignore errors if createCanvas fails (e.g. missing dependencies)
   }
 }
